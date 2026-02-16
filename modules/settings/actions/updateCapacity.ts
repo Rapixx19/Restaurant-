@@ -72,6 +72,9 @@ export async function updateCapacity(
     ...currentSettings,
     capacity: {
       maxPartySize,
+      maxTables: currentSettings.capacity?.maxTables || 20,
+      seatsPerTable: currentSettings.capacity?.seatsPerTable || 4,
+      defaultReservationDuration: currentSettings.capacity?.defaultReservationDuration || 90,
       operatingHours,
     },
   };

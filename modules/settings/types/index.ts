@@ -47,7 +47,15 @@ export interface RestaurantSettings {
   };
   capacity: {
     maxPartySize: number;
+    maxTables: number;
+    seatsPerTable: number;
+    defaultReservationDuration: number;
     operatingHours: OperatingHours;
+  };
+  widget?: {
+    primaryColor: string;
+    position: 'bottom-right' | 'bottom-left';
+    welcomeMessage?: string;
   };
 }
 

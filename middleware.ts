@@ -12,6 +12,11 @@ const PROTECTED_ROUTES = ['/dashboard', '/onboarding'];
 const AUTH_ROUTES = ['/login', '/signup'];
 
 /**
+ * Widget routes that allow iframe embedding.
+ */
+const WIDGET_ROUTES = ['/widget'];
+
+/**
  * Middleware for session management and route protection.
  *
  * Rules:
@@ -26,6 +31,18 @@ export async function middleware(request: NextRequest) {
 
   // Add pathname header for server components
   supabaseResponse.headers.set('x-pathname', pathname);
+
+  // Check if the current path is a widget route (allow iframe embedding)
+  const isWidgetRoute = WIDGET_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  // Set headers to allow iframe embedding for widget routes
+  if (isWidgetRoute) {
+    supabaseResponse.headers.set('X-Frame-Options', 'ALLOWALL');
+    supabaseResponse.headers.set('Content-Security-Policy', "frame-ancestors *");
+    return supabaseResponse;
+  }
 
   // Check if the current path is a protected route
   const isProtectedRoute = PROTECTED_ROUTES.some(
