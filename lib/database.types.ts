@@ -42,15 +42,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'profiles_id_fkey';
-            columns: ['id'];
-            isOneToOne: true;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       restaurants: {
         Row: {
@@ -65,6 +57,7 @@ export type Database = {
           address: Json | null;
           timezone: string;
           currency: string;
+          image_url: string | null;
           settings: Json;
           created_at: string;
           updated_at: string;
@@ -81,6 +74,7 @@ export type Database = {
           address?: Json | null;
           timezone?: string;
           currency?: string;
+          image_url?: string | null;
           settings?: Json;
           created_at?: string;
           updated_at?: string;
@@ -97,19 +91,12 @@ export type Database = {
           address?: Json | null;
           timezone?: string;
           currency?: string;
+          image_url?: string | null;
           settings?: Json;
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'restaurants_owner_id_fkey';
-            columns: ['owner_id'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       restaurant_members: {
         Row: {
@@ -139,22 +126,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'restaurant_members_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'restaurant_members_user_id_fkey';
-            columns: ['user_id'];
-            isOneToOne: false;
-            referencedRelation: 'profiles';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       menu_categories: {
         Row: {
@@ -187,15 +159,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'menu_categories_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       menu_items: {
         Row: {
@@ -249,22 +213,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'menu_items_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'menu_items_category_id_fkey';
-            columns: ['category_id'];
-            isOneToOne: false;
-            referencedRelation: 'menu_categories';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       customers: {
         Row: {
@@ -312,15 +261,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'customers_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       reservations: {
         Row: {
@@ -380,22 +321,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'reservations_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'reservations_customer_id_fkey';
-            columns: ['customer_id'];
-            isOneToOne: false;
-            referencedRelation: 'customers';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       orders: {
         Row: {
@@ -470,22 +396,7 @@ export type Database = {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'orders_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'orders_customer_id_fkey';
-            columns: ['customer_id'];
-            isOneToOne: false;
-            referencedRelation: 'customers';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       call_logs: {
         Row: {
@@ -551,22 +462,7 @@ export type Database = {
           metadata?: Json;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'call_logs_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'call_logs_customer_id_fkey';
-            columns: ['customer_id'];
-            isOneToOne: false;
-            referencedRelation: 'customers';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       chat_sessions: {
         Row: {
@@ -605,22 +501,7 @@ export type Database = {
           metadata?: Json;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'chat_sessions_restaurant_id_fkey';
-            columns: ['restaurant_id'];
-            isOneToOne: false;
-            referencedRelation: 'restaurants';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'chat_sessions_customer_id_fkey';
-            columns: ['customer_id'];
-            isOneToOne: false;
-            referencedRelation: 'customers';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
       chat_messages: {
         Row: {
@@ -647,24 +528,11 @@ export type Database = {
           metadata?: Json;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'chat_messages_session_id_fkey';
-            columns: ['session_id'];
-            isOneToOne: false;
-            referencedRelation: 'chat_sessions';
-            referencedColumns: ['id'];
-          }
-        ];
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
-    Functions: {
-      handle_new_user: {
-        Args: Record<string, never>;
-        Returns: unknown;
-      };
-    };
+    Functions: Record<string, never>;
     Enums: {
       member_role: 'owner' | 'admin' | 'manager' | 'staff';
       reservation_status: 'pending' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show';

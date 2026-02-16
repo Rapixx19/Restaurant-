@@ -27,7 +27,7 @@ echo ""
 # Zone detection
 ZONE="green"
 
-if echo "$CHANGED_FILES" | grep -qE "middleware|auth|webhook|supabase/admin"; then
+if echo "$CHANGED_FILES" | grep -qE "middleware|auth|webhook|supabase/admin|supabase/migrations"; then
     ZONE="red"
 elif echo "$CHANGED_FILES" | grep -qE "lib/ai|api/|hooks/"; then
     ZONE="yellow"

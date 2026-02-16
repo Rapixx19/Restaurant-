@@ -82,6 +82,7 @@ stores/                 # State management (Zustand/Redux)
 middleware/             # Auth middleware, request validation
 lib/auth/               # Authentication logic
 lib/supabase/admin/     # Supabase admin operations
+supabase/migrations/    # Database schema & RLS policies
 app/api/webhook/        # External webhooks (Stripe, etc.)
 app/api/auth/           # Auth endpoints
 config/rbac/            # Role-based access control
@@ -102,7 +103,7 @@ Used by `scripts/smart-test.sh`:
 
 ```bash
 # RED ZONE patterns
-middleware|auth|webhook|supabase/admin
+middleware|auth|webhook|supabase/admin|supabase/migrations
 
 # YELLOW ZONE patterns
 lib/ai|api/|hooks/
