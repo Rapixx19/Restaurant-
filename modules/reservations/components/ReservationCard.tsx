@@ -80,7 +80,7 @@ export function ReservationCard({ reservation, onStatusChange }: ReservationCard
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm">
             <div>
               <span className="text-slate-400">Time:</span>
-              <span className="ml-1 text-white">{formatTime(reservation.time)}</span>
+              <span className="ml-1 text-white">{formatTime(reservation.reservation_time)}</span>
             </div>
             <div>
               <span className="text-slate-400">Party:</span>

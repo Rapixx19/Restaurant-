@@ -85,7 +85,7 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
     id: `reservation-${reservation.id}`,
     type: 'reservation',
     title: 'New Reservation',
-    description: `${reservation.customer_name} - Party of ${reservation.party_size} for ${reservation.date} at ${reservation.time}`,
+    description: `${reservation.customer_name} - Party of ${reservation.party_size} for ${reservation.reservation_date} at ${reservation.reservation_time}`,
     timestamp: reservation.created_at,
     status: reservation.status,
   }), []);
