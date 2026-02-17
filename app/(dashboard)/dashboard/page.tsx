@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { UsageBanner, StatCards, ActivityFeed } from '@/modules/dashboard';
+import { UsageBanner, StatCards, ActivityFeed, PendingVerificationBanner } from '@/modules/dashboard';
 import type { Profile, Restaurant } from '@/lib/database.types';
 import { Plus, UtensilsCrossed, MessageCircle, Settings, MapPin, Building2, ArrowRight } from 'lucide-react';
 import { getOrganizationLimits } from '@/lib/limits';
@@ -172,6 +172,7 @@ export default async function DashboardPage() {
 
   // SINGLE-LOCATION: Show regular dashboard
   const restaurant = restaurants[0];
+  const isPending = (restaurant as Restaurant & { status?: string }).status === 'pending';
 
   return (
     <div className="space-y-8">
@@ -186,6 +187,9 @@ export default async function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Pending Verification Banner */}
+      {isPending && <PendingVerificationBanner />}
 
       {/* Usage Banner */}
       <UsageBanner restaurant={restaurant} />
