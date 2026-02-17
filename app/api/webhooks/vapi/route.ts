@@ -989,8 +989,9 @@ export async function POST(request: NextRequest) {
           // Track voice minutes usage for billing (independent of call log save)
           // Only track if we have a valid duration
           if (durationMinutes > 0) {
+            let orgId: string | null = null;
             try {
-              const orgId = await getRestaurantOrganizationId(restaurantId);
+              orgId = await getRestaurantOrganizationId(restaurantId);
               if (orgId) {
                 const result = await incrementVoiceMinutes(orgId, durationMinutes);
                 logger.info('Voice minutes tracked', {
@@ -1001,15 +1002,60 @@ export async function POST(request: NextRequest) {
                   callLogSaved,
                 });
 
-                // If account is blocked due to overage, log it
+                // If account is blocked due to overage, log to billing_alerts
                 if (result.status === 'blocked') {
                   logger.warn('Organization voice minutes exceeded', { organizationId: orgId });
+                  try {
+                    const supabase = getSupabase();
+                    const { error: alertError } = await supabase.from('billing_alerts').insert({
+                      organization_id: orgId,
+                      alert_type: 'voice_limit_exceeded',
+                      severity: 'error',
+                      title: 'Voice Minute Limit Exceeded',
+                      message: `Your organization has exceeded the voice minute limit. New calls may be affected until you upgrade or purchase more minutes.`,
+                      metadata: {
+                        minutes_used: durationMinutes,
+                        call_id: call.id,
+                        restaurant_id: restaurantId,
+                      },
+                    });
+                    if (alertError) {
+                      logger.error('Failed to create billing alert', { error: alertError });
+                    }
+                  } catch (err) {
+                    logger.error('Failed to create billing alert', { error: err });
+                  }
                 }
               }
             } catch (error) {
               // Billing failure should NOT prevent returning success
               // The call data is more important than billing tracking
               logger.error('Failed to track voice minutes', { error, restaurantId, durationMinutes });
+
+              // Log failure to billing_alerts for dashboard visibility
+              if (orgId) {
+                try {
+                  const supabase = getSupabase();
+                  const { error: alertError } = await supabase.from('billing_alerts').insert({
+                    organization_id: orgId,
+                    alert_type: 'voice_tracking_failed',
+                    severity: 'warning',
+                    title: 'Voice Minute Tracking Failed',
+                    message: `Failed to track ${durationMinutes} voice minutes for a call. This may affect your billing accuracy.`,
+                    metadata: {
+                      error: error instanceof Error ? error.message : String(error),
+                      minutes: durationMinutes,
+                      call_id: call.id,
+                      restaurant_id: restaurantId,
+                    },
+                  });
+                  if (alertError) {
+                    logger.error('Failed to create billing alert for tracking failure', { error: alertError });
+                  }
+                } catch (err) {
+                  logger.error('Failed to create billing alert for tracking failure', { error: err });
+                }
+              }
             }
           }
         }
