@@ -19,8 +19,16 @@ interface OnboardingStatusBannerProps {
  * - suspended: Account suspended message
  */
 export function OnboardingStatusBanner({ status, twilioNumber }: OnboardingStatusBannerProps) {
+  // Debug logging for hydration issues
+  if (typeof window !== 'undefined') {
+    console.log('[OnboardingStatusBanner] Status:', status, 'TwilioNumber:', twilioNumber);
+  }
+
+  // Defensive: handle undefined status during hydration
+  const safeStatus = status || 'active';
+
   // Active status with phone number - show success state
-  if (status === 'active' && twilioNumber) {
+  if (safeStatus === 'active' && twilioNumber) {
     return (
       <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/30 rounded-xl p-6">
         <div className="flex items-start gap-4">
@@ -47,12 +55,12 @@ export function OnboardingStatusBanner({ status, twilioNumber }: OnboardingStatu
   }
 
   // Active without phone - hide banner
-  if (status === 'active') {
+  if (safeStatus === 'active') {
     return null;
   }
 
   // Suspended status
-  if (status === 'suspended') {
+  if (safeStatus === 'suspended') {
     return (
       <div className="bg-gradient-to-r from-red-500/10 to-rose-500/10 border border-red-500/30 rounded-xl p-6">
         <div className="flex items-start gap-4">
@@ -83,7 +91,7 @@ export function OnboardingStatusBanner({ status, twilioNumber }: OnboardingStatu
   }
 
   // Info requested status - Action required
-  if (status === 'info_requested') {
+  if (safeStatus === 'info_requested') {
     return (
       <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-orange-500/30 rounded-xl p-6">
         <div className="flex items-start gap-4">
@@ -132,7 +140,7 @@ export function OnboardingStatusBanner({ status, twilioNumber }: OnboardingStatu
 
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-white mb-1">
-            {status === 'reviewing' ? 'Under Review' : 'Verification in Progress'}
+            {safeStatus === 'reviewing' ? 'Under Review' : 'Verification in Progress'}
           </h3>
           <p className="text-gray-300 mb-4">
             Welcome! The Vecterai team is currently reviewing your restaurant profile and menu.

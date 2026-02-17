@@ -103,13 +103,23 @@ export function DashboardNav({ user, profile, restaurant, organizationUsage }: D
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const displayName = profile?.full_name || user.email?.split('@')[0] || 'User';
+  // Debug logging for hydration issues
+  if (typeof window !== 'undefined') {
+    console.log('[DashboardNav] Current User:', user);
+    console.log('[DashboardNav] Current Profile:', profile);
+    console.log('[DashboardNav] Current Restaurant:', restaurant);
+  }
+
+  // Defensive: handle potential undefined user during hydration
+  const userEmail = user?.email ?? '';
+  const displayName = profile?.full_name || userEmail.split('@')[0] || 'User';
   const initials = displayName
     .split(' ')
-    .map((n) => n[0])
+    .map((n) => n?.[0] ?? '')
+    .filter(Boolean)
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || 'U';
 
   // Plan display name mapping
   const getPlanBadgeColor = (planName: string) => {
@@ -304,7 +314,7 @@ export function DashboardNav({ user, profile, restaurant, organizationUsage }: D
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-white truncate">{displayName}</p>
-                <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                <p className="text-xs text-gray-500 truncate">{userEmail}</p>
               </div>
               <ChevronDown
                 className={cn(

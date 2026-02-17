@@ -25,8 +25,23 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
   const [usage, setUsage] = useState<UsageData>({ chatMessages: 0, reservations: 0 });
   const [loading, setLoading] = useState(true);
 
-  const settings = (restaurant.settings || {}) as unknown as RestaurantSettings;
-  const tierId: TierId = settings.tier || 'free';
+  // Debug logging for hydration issues
+  if (typeof window !== 'undefined') {
+    console.log('[UsageBanner] Current Restaurant:', restaurant);
+  }
+
+  // Defensive: handle potential undefined restaurant during hydration
+  if (!restaurant) {
+    return (
+      <div className="bg-card border border-white/10 rounded-xl p-6 animate-pulse">
+        <div className="h-4 bg-white/10 rounded w-1/4 mb-4" />
+        <div className="h-2 bg-white/10 rounded w-full" />
+      </div>
+    );
+  }
+
+  const settings = (restaurant?.settings || {}) as unknown as RestaurantSettings;
+  const tierId: TierId = settings?.tier || 'free';
   const tier = getPricingTier(tierId) as PricingTier;
 
   useEffect(() => {
