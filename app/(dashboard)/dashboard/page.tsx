@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { UsageBanner, StatCards, ActivityFeed, PendingVerificationBanner } from '@/modules/dashboard';
+import { UsageBanner, StatCards, ActivityFeed, OnboardingStatusBanner } from '@/modules/dashboard';
 import type { Profile, Restaurant } from '@/lib/database.types';
 import { Plus, UtensilsCrossed, MessageCircle, Settings, MapPin, Building2, ArrowRight } from 'lucide-react';
 import { getOrganizationLimits } from '@/lib/limits';
@@ -172,7 +172,9 @@ export default async function DashboardPage() {
 
   // SINGLE-LOCATION: Show regular dashboard
   const restaurant = restaurants[0];
-  const isPending = (restaurant as Restaurant & { status?: string }).status === 'pending';
+  const restaurantStatus = (restaurant as Restaurant & { status?: string }).status || 'active';
+  const settings = restaurant.settings as { voice?: { vapiPhoneNumberId?: string } } | null;
+  const twilioNumber = settings?.voice?.vapiPhoneNumberId;
 
   return (
     <div className="space-y-8">
@@ -188,8 +190,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Pending Verification Banner */}
-      {isPending && <PendingVerificationBanner />}
+      {/* Onboarding Status Banner */}
+      <OnboardingStatusBanner
+        status={restaurantStatus as 'pending' | 'reviewing' | 'info_requested' | 'active' | 'suspended'}
+        twilioNumber={twilioNumber}
+      />
 
       {/* Usage Banner */}
       <UsageBanner restaurant={restaurant} />

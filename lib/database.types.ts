@@ -60,7 +60,7 @@ export type Database = {
           currency: string;
           image_url: string | null;
           settings: Json;
-          status: 'pending' | 'active' | 'suspended';
+          status: 'pending' | 'reviewing' | 'info_requested' | 'active' | 'suspended';
           created_at: string;
           updated_at: string;
         };
@@ -79,7 +79,7 @@ export type Database = {
           currency?: string;
           image_url?: string | null;
           settings?: Json;
-          status?: 'pending' | 'active' | 'suspended';
+          status?: 'pending' | 'reviewing' | 'info_requested' | 'active' | 'suspended';
           created_at?: string;
           updated_at?: string;
         };
@@ -98,7 +98,7 @@ export type Database = {
           currency?: string;
           image_url?: string | null;
           settings?: Json;
-          status?: 'pending' | 'active' | 'suspended';
+          status?: 'pending' | 'reviewing' | 'info_requested' | 'active' | 'suspended';
           created_at?: string;
           updated_at?: string;
         };

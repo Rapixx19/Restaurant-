@@ -695,13 +695,14 @@ async function findRestaurantByPhoneNumberId(phoneNumberId: string): Promise<{
   address: { city?: string; street?: string } | null;
   settings: RestaurantSettings;
   description: string | null;
+  status: string;
 } | null> {
   const supabase = getSupabase();
 
   // Query restaurants where settings.voice.vapiPhoneNumberId matches
   const { data: restaurants, error } = await supabase
     .from('restaurants')
-    .select('id, name, phone, address, settings, description')
+    .select('id, name, phone, address, settings, description, status')
     .filter('settings->voice->>vapiPhoneNumberId', 'eq', phoneNumberId)
     .limit(1);
 
@@ -723,6 +724,7 @@ async function findRestaurantByPhoneNumberId(phoneNumberId: string): Promise<{
     address: restaurant.address as { city?: string; street?: string } | null,
     settings: (restaurant.settings || {}) as unknown as RestaurantSettings,
     description: restaurant.description,
+    status: restaurant.status || 'active',
   };
 }
 
@@ -764,6 +766,53 @@ Example: "Hi there! I apologize, but I'm having a small technical hiccup on my e
         fillerInjectionEnabled: true, // Natural "um", "ah" fillers
       },
       firstMessage: "Hi there! I apologize, but I'm experiencing a small technical issue. Could you try calling back in just a moment? Thank you so much for your patience!",
+      transcriber: {
+        provider: 'deepgram',
+        model: 'nova-2',
+        language: 'en',
+      },
+    },
+  };
+}
+
+/**
+ * Build a "technical update" assistant for restaurants that are not yet active.
+ * This politely informs callers that the line is being set up.
+ */
+function buildTechnicalUpdateAssistant(restaurantName?: string) {
+  const name = restaurantName || 'the restaurant';
+  return {
+    assistant: {
+      name: 'Technical Update Assistant',
+      model: {
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-20250514',
+        systemPrompt: `You are a polite assistant informing callers that ${name}'s phone line is currently undergoing a brief technical update.
+
+## Your Response
+- Apologize politely and warmly
+- Let them know the line will be available shortly
+- If they have an urgent matter, offer to take their name and number so the restaurant can call them back
+
+## Guidelines
+- Keep responses very brief (1-2 sentences)
+- Be warm, professional, and reassuring
+- Don't go into technical details
+- If they insist on making a reservation, explain that the booking system is also being updated and to please try again soon`,
+        temperature: 0.7,
+      },
+      voice: {
+        provider: 'elevenlabs',
+        voiceId: 'EXAVITQu4vr4xnSDxMaL',
+        model: 'eleven_turbo_v2_5',
+        stability: 0.5,
+        similarityBoost: 0.75,
+        style: 0,
+        useSpeakerBoost: true,
+        optimizeStreamingLatency: 4,
+        fillerInjectionEnabled: true,
+      },
+      firstMessage: `Hi there! Thank you for calling ${name}. I just need to let you know that this line is currently undergoing a brief technical update. Please try calling back shortly, and we'll be happy to help you then. Thank you so much for your patience!`,
       transcriber: {
         provider: 'deepgram',
         model: 'nova-2',
@@ -1082,6 +1131,7 @@ export async function POST(request: NextRequest) {
           address: { city?: string; street?: string } | null;
           settings: RestaurantSettings;
           description: string | null;
+          status: string;
         } | null = null;
 
         // PRIMARY: Lookup by phoneNumberId (the telephony bridge)
@@ -1096,7 +1146,7 @@ export async function POST(request: NextRequest) {
           const supabase = getSupabase();
           const { data } = await supabase
             .from('restaurants')
-            .select('id, name, phone, address, settings, description')
+            .select('id, name, phone, address, settings, description, status')
             .eq('id', restaurantId)
             .single();
 
@@ -1108,6 +1158,7 @@ export async function POST(request: NextRequest) {
               address: data.address as { city?: string; street?: string } | null,
               settings: (data.settings || {}) as unknown as RestaurantSettings,
               description: data.description,
+              status: data.status || 'active',
             };
           }
         }
@@ -1119,6 +1170,16 @@ export async function POST(request: NextRequest) {
             restaurantId,
           });
           return NextResponse.json(buildFallbackAssistant());
+        }
+
+        // TELEPHONY GUARDRAIL: If restaurant is not active, return technical update assistant
+        if (restaurant.status !== 'active') {
+          logger.info('Assistant request: restaurant not active, returning technical update', {
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            status: restaurant.status,
+          });
+          return NextResponse.json(buildTechnicalUpdateAssistant(restaurant.name));
         }
 
         // Successfully identified restaurant via telephony bridge
