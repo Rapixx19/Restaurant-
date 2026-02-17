@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_call_logs_created_at ON call_logs(created_at DESC
 -- reservations: ensure indexes exist
 CREATE INDEX IF NOT EXISTS idx_reservations_restaurant ON reservations(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_created_at ON reservations(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reservations_date ON reservations(date);
+CREATE INDEX IF NOT EXISTS idx_reservations_date ON reservations(reservation_date);
 
 -- orders: ensure indexes exist
 CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id);

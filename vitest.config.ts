@@ -11,8 +11,9 @@ export default defineConfig({
     exclude: ["node_modules", "dist", ".next", "e2e/**"],
 
     // Coverage configuration
+    // Using istanbul instead of v8 for Node 18 compatibility
     coverage: {
-      provider: "v8",
+      provider: "istanbul",
       reporter: ["text", "json", "html"],
       reportsDirectory: "./coverage",
       exclude: [
