@@ -9,9 +9,15 @@ import Stripe from 'stripe';
  * This is a one-time purchase that adds minutes to the organization's balance.
  */
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2026-01-28.clover',
-});
+// Lazy initialization to avoid build-time errors
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2026-01-28.clover',
+  });
+}
 
 // Minute package options (EUR pricing to match €29/€79/€199 plan tiers)
 // Prices in cents: €19 = 1900, €79 = 7900, €149 = 14900
@@ -23,6 +29,7 @@ const MINUTE_PACKAGES = [
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripe();
     const supabase = await createClient();
 
     // Verify authentication

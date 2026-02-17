@@ -172,7 +172,7 @@ function CallRow({ call }: { call: CallLog }) {
             <Phone className="w-5 h-5 text-indigo-500" />
           </div>
           <div>
-            <p className="font-medium text-white">{maskPhoneNumber(call.caller_phone)}</p>
+            <p className="font-medium text-white">{maskPhoneNumber(call.caller_phone || '')}</p>
             <p className="text-sm text-gray-400">{formatDate(call.started_at)}</p>
           </div>
         </div>
