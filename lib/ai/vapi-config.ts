@@ -165,9 +165,13 @@ export interface VapiAssistantConfig {
   voice: {
     provider: 'elevenlabs';
     voiceId: string;
+    model: 'eleven_turbo_v2_5' | 'eleven_multilingual_v2';
     stability: number;
     similarityBoost: number;
+    style: number;
+    useSpeakerBoost: boolean;
     optimizeStreamingLatency: number;
+    fillerInjectionEnabled: boolean;
   };
   firstMessage: string;
   endCallMessage: string;
@@ -216,9 +220,13 @@ export function generateAssistantConfig(params: {
     voice: {
       provider: 'elevenlabs',
       voiceId: voice.id,
-      stability: 0.5,
-      similarityBoost: 0.75,
-      optimizeStreamingLatency: 4, // Maximum optimization for real-time
+      model: 'eleven_turbo_v2_5', // Lowest latency for real-time conversation
+      stability: 0.5, // Natural speech variation
+      similarityBoost: 0.75, // Voice consistency with expression
+      style: 0, // Most natural conversational style
+      useSpeakerBoost: true, // Enhanced clarity for phone
+      optimizeStreamingLatency: 4, // Maximum latency optimization
+      fillerInjectionEnabled: true, // Natural breath sounds and fillers
     },
     firstMessage,
     endCallMessage: 'Thank you for calling. Have a wonderful day!',

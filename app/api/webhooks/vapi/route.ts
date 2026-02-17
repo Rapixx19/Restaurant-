@@ -753,10 +753,15 @@ Example: "Hi there! I apologize, but I'm having a small technical hiccup on my e
         temperature: 0.7,
       },
       voice: {
-        provider: 'eleven-labs',
-        voiceId: 'EXAVITQu4vr4xnSDxMaL',
-        stability: 0.5,
-        similarityBoost: 0.75,
+        provider: 'elevenlabs',
+        voiceId: 'EXAVITQu4vr4xnSDxMaL', // Sarah - warm, conversational
+        model: 'eleven_turbo_v2_5', // Lowest latency model
+        stability: 0.5, // Natural variation in speech
+        similarityBoost: 0.75, // Maintain voice consistency
+        style: 0, // Most natural conversational style
+        useSpeakerBoost: true, // Enhanced clarity
+        optimizeStreamingLatency: 4, // Maximum latency optimization
+        fillerInjectionEnabled: true, // Natural "um", "ah" fillers
       },
       firstMessage: "Hi there! I apologize, but I'm experiencing a small technical issue. Could you try calling back in just a moment? Thank you so much for your patience!",
       transcriber: {
@@ -1158,10 +1163,20 @@ export async function POST(request: NextRequest) {
               temperature: 0.7,
             },
             voice: {
-              provider: 'eleven-labs',
+              // ElevenLabs Voice Configuration - Optimized for natural conversation
+              provider: 'elevenlabs',
               voiceId: voiceSettings?.elevenLabsVoiceId || 'EXAVITQu4vr4xnSDxMaL',
-              stability: 0.5,
-              similarityBoost: 0.75,
+              // Use multilingual model for language switching, turbo for English-only
+              model: primaryLanguage === 'en' ? 'eleven_turbo_v2_5' : 'eleven_multilingual_v2',
+              // Humanistic parameters
+              stability: 0.5, // Allow natural speech variation
+              similarityBoost: 0.75, // Maintain voice identity while allowing expression
+              style: 0, // Natural conversational style (0 = most natural)
+              useSpeakerBoost: true, // Enhanced clarity for phone calls
+              // Latency optimization
+              optimizeStreamingLatency: 4, // Maximum optimization (0-4 scale)
+              // Natural speech features
+              fillerInjectionEnabled: true, // Enable natural "um", "ah", breath sounds
             },
             firstMessage,
             transcriber: {
