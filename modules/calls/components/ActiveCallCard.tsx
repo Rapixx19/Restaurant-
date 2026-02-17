@@ -8,8 +8,10 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ActiveCall {
   id: string;
-  vapi_call_id: string;
-  caller_phone: string;
+  call_id?: string;        // Original column name from migrations
+  vapi_call_id?: string;   // Alias for compatibility
+  caller_phone: string | null;
+  phone_number?: string | null; // Fallback for caller phone
   started_at: string;
   status: string;
 }
@@ -60,7 +62,8 @@ function ActiveCallItem({ call }: { call: ActiveCall }) {
     return () => clearInterval(interval);
   }, [call.started_at]);
 
-  const phoneNumber = call.caller_phone;
+  // Defensive: use caller_phone with fallback to phone_number
+  const phoneNumber = call.caller_phone ?? call.phone_number ?? null;
 
   return (
     <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl border border-red-500/20">
@@ -111,9 +114,10 @@ export function ActiveCallCard({ restaurantId }: ActiveCallCardProps) {
     const supabase = createClient();
 
     try {
+      // Select both call_id and vapi_call_id for schema compatibility
       const { data, error } = await supabase
         .from('call_logs')
-        .select('id, vapi_call_id, caller_phone, started_at, status')
+        .select('id, call_id, caller_phone, phone_number, started_at, status')
         .eq('restaurant_id', restaurantId)
         .eq('status', 'active')
         .order('started_at', { ascending: false });

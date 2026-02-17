@@ -159,9 +159,10 @@ function TranscriptViewer({ transcript }: { transcript: unknown }) {
   );
 }
 
-// Call row component
+// Call row component - defensive for schema variations
 function CallRow({ call }: { call: CallLog }) {
-  const languageFlag = LANGUAGE_FLAGS[call.language_detected || 'en'] || '🌐';
+  // Defensive: handle potential undefined/null fields
+  const languageFlag = LANGUAGE_FLAGS[call.language_detected ?? 'en'] ?? '🌐';
 
   return (
     <div className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all">
@@ -172,8 +173,8 @@ function CallRow({ call }: { call: CallLog }) {
             <Phone className="w-5 h-5 text-indigo-500" />
           </div>
           <div>
-            <p className="font-medium text-white">{maskPhoneNumber(call.caller_phone || '')}</p>
-            <p className="text-sm text-gray-400">{formatDate(call.started_at)}</p>
+            <p className="font-medium text-white">{maskPhoneNumber(call.caller_phone ?? '')}</p>
+            <p className="text-sm text-gray-400">{formatDate(call.started_at ?? new Date().toISOString())}</p>
           </div>
         </div>
 

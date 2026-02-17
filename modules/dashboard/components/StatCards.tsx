@@ -58,26 +58,14 @@ export function StatCards({ restaurantId }: StatCardsProps) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Debug logging for hydration issues
-  if (typeof window !== 'undefined') {
-    console.log('[StatCards] Restaurant ID:', restaurantId);
-  }
-
-  // Defensive: handle missing restaurantId
-  if (!restaurantId) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-card border border-white/10 rounded-xl p-6 animate-pulse">
-            <div className="h-4 bg-white/10 rounded w-1/2 mb-4" />
-            <div className="h-8 bg-white/10 rounded w-1/3" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
+  // Hooks must be called unconditionally - move useEffect before any early returns
   useEffect(() => {
+    // Skip fetch if no restaurant ID
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchStats() {
       try {
         const supabase = createClient();
@@ -149,6 +137,20 @@ export function StatCards({ restaurantId }: StatCardsProps) {
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, [restaurantId]);
+
+  // Defensive: show skeleton if no restaurantId (AFTER hooks)
+  if (!restaurantId) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-card border border-white/10 rounded-xl p-6 animate-pulse">
+            <div className="h-4 bg-white/10 rounded w-1/2 mb-4" />
+            <div className="h-8 bg-white/10 rounded w-1/3" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

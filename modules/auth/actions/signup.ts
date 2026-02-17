@@ -50,7 +50,7 @@ export async function signup(
     };
   }
 
-  // Redirect to dashboard after successful signup
-  // The middleware will handle the session
-  redirect('/dashboard');
+  // Redirect to onboarding after successful signup
+  // New users always need to create a restaurant first
+  redirect('/onboarding');
 }

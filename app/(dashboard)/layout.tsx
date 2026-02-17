@@ -100,11 +100,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     .single() as { data: Profile | null };
 
   // Fetch user's restaurant (if any) with organization_id
-  const { data: restaurant } = await supabase
+  // IMPORTANT: Use .limit(1) instead of .single() to avoid throwing on 0 results
+  const { data: restaurants } = await supabase
     .from('restaurants')
     .select('*')
     .eq('owner_id', user.id)
-    .single() as { data: (Restaurant & { organization_id?: string }) | null };
+    .order('created_at', { ascending: true })
+    .limit(1) as { data: (Restaurant & { organization_id?: string })[] | null };
+
+  // Safely get first restaurant (may be null/undefined)
+  const restaurant = restaurants?.[0] ?? null;
 
   // Get current path to check if we're on onboarding
   const headersList = await headers();
@@ -116,9 +121,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     redirect('/onboarding');
   }
 
-  // Fetch organization usage for sidebar
+  // Fetch organization usage for sidebar (with defensive optional chaining)
   const organizationUsage = restaurant?.organization_id
-    ? await getOrganizationUsage(supabase, user.id, restaurant.organization_id)
+    ? await getOrganizationUsage(supabase, user?.id ?? '', restaurant.organization_id)
     : undefined;
 
   return (

@@ -59,10 +59,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Redirect authenticated users from auth routes to dashboard
+  // Redirect authenticated users from auth routes
+  // Note: Layout will check for restaurants and redirect to /onboarding if needed
   if (isAuthRoute && user) {
     const redirectTo = request.nextUrl.searchParams.get('redirect') || '/dashboard';
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    // Safety: Never redirect back to auth routes to avoid loops
+    const safeRedirect = redirectTo.startsWith('/login') || redirectTo.startsWith('/signup')
+      ? '/dashboard'
+      : redirectTo;
+    return NextResponse.redirect(new URL(safeRedirect, request.url));
   }
 
   return supabaseResponse;

@@ -50,10 +50,10 @@ function LocationSelector({
 
       {/* Location Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {restaurants.map((restaurant) => (
+        {restaurants?.map((restaurant) => (
           <Link
-            key={restaurant.id}
-            href={`/dashboard/${restaurant.slug || restaurant.id}`}
+            key={restaurant?.id ?? Math.random().toString()}
+            href={`/dashboard/${restaurant?.slug ?? restaurant?.id ?? ''}`}
             className="group p-6 bg-card border border-white/10 rounded-xl hover:border-electric-blue/50 hover:bg-electric-blue/5 transition-all duration-200"
           >
             <div className="flex items-start justify-between mb-4">
@@ -62,11 +62,11 @@ function LocationSelector({
               </div>
               <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-electric-blue group-hover:translate-x-1 transition-all" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-1">{restaurant.name}</h3>
-            {restaurant.address && (
+            <h3 className="text-lg font-semibold text-white mb-1">{restaurant?.name ?? 'Restaurant'}</h3>
+            {restaurant?.address && (
               <p className="text-sm text-gray-400 flex items-center gap-1">
                 <MapPin className="w-3 h-3" />
-                {(restaurant.address as { city?: string })?.city || 'Location'}
+                {(restaurant?.address as { city?: string })?.city ?? 'Location'}
               </p>
             )}
           </Link>
@@ -145,18 +145,18 @@ export default async function DashboardPage() {
 
   // MULTI-LOCATION: Show location selector
   if (restaurants.length > 1) {
-    // Get organization limits
-    const firstRestaurant = restaurants[0];
+    // Get organization limits - with defensive access
+    const firstRestaurant = restaurants?.[0];
     let planName = 'free';
     let canAddMore = false;
 
-    // Check for organization_id in extended restaurant data
-    const orgId = (firstRestaurant as Restaurant & { organization_id?: string }).organization_id;
+    // Check for organization_id in extended restaurant data (defensive)
+    const orgId = (firstRestaurant as Restaurant & { organization_id?: string })?.organization_id;
     if (orgId) {
       const limits = await getOrganizationLimits(orgId);
       if (limits) {
-        planName = limits.planName;
-        canAddMore = limits.currentLocations < limits.locationLimit;
+        planName = limits?.planName ?? 'free';
+        canAddMore = (limits?.currentLocations ?? 0) < (limits?.locationLimit ?? 1);
       }
     }
 
@@ -171,10 +171,20 @@ export default async function DashboardPage() {
   }
 
   // SINGLE-LOCATION: Show regular dashboard
-  const restaurant = restaurants[0];
-  const restaurantStatus = (restaurant as Restaurant & { status?: string }).status || 'active';
-  const settings = restaurant.settings as { voice?: { vapiPhoneNumberId?: string } } | null;
-  const twilioNumber = settings?.voice?.vapiPhoneNumberId;
+  // Defensive: ensure restaurant exists before accessing
+  const restaurant = restaurants?.[0];
+
+  // Double-check restaurant exists (belt and suspenders)
+  if (!restaurant) {
+    redirect('/onboarding');
+  }
+
+  // Defensive: safely access status with fallback for new/pending users
+  const restaurantStatus = (restaurant as Restaurant & { status?: string })?.status ?? 'pending';
+
+  // Defensive: safely access nested settings with optional chaining
+  const settings = (restaurant?.settings ?? null) as { voice?: { vapiPhoneNumberId?: string } } | null;
+  const twilioNumber = settings?.voice?.vapiPhoneNumberId ?? null;
 
   return (
     <div className="space-y-8">
@@ -196,17 +206,17 @@ export default async function DashboardPage() {
         twilioNumber={twilioNumber}
       />
 
-      {/* Usage Banner */}
-      <UsageBanner restaurant={restaurant} />
+      {/* Usage Banner - with defensive restaurant prop */}
+      {restaurant && <UsageBanner restaurant={restaurant} />}
 
-      {/* Stats Grid */}
-      <StatCards restaurantId={restaurant.id} />
+      {/* Stats Grid - with defensive restaurantId */}
+      <StatCards restaurantId={restaurant?.id ?? ''} />
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed - Takes 2 columns */}
         <div className="lg:col-span-2">
-          <ActivityFeed restaurantId={restaurant.id} />
+          <ActivityFeed restaurantId={restaurant?.id ?? ''} />
         </div>
 
         {/* Quick Actions - Takes 1 column */}

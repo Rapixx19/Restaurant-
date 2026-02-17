@@ -25,26 +25,21 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
   const [usage, setUsage] = useState<UsageData>({ chatMessages: 0, reservations: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Debug logging for hydration issues
-  if (typeof window !== 'undefined') {
-    console.log('[UsageBanner] Current Restaurant:', restaurant);
-  }
+  // Defensive: safely extract restaurant ID (hooks must be called unconditionally)
+  const restaurantId = restaurant?.id ?? null;
 
-  // Defensive: handle potential undefined restaurant during hydration
-  if (!restaurant) {
-    return (
-      <div className="bg-card border border-white/10 rounded-xl p-6 animate-pulse">
-        <div className="h-4 bg-white/10 rounded w-1/4 mb-4" />
-        <div className="h-2 bg-white/10 rounded w-full" />
-      </div>
-    );
-  }
-
-  const settings = (restaurant?.settings || {}) as unknown as RestaurantSettings;
-  const tierId: TierId = settings?.tier || 'free';
+  // Extract settings safely
+  const settings = (restaurant?.settings ?? {}) as unknown as RestaurantSettings;
+  const tierId: TierId = settings?.tier ?? 'free';
   const tier = getPricingTier(tierId) as PricingTier;
 
   useEffect(() => {
+    // Skip fetch if no restaurant ID
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchUsage() {
       try {
         const supabase = createClient();
@@ -61,7 +56,7 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
         const { count: reservationCount } = await supabase
           .from('reservations')
           .select('id', { count: 'exact', head: true })
-          .eq('restaurant_id', restaurant.id)
+          .eq('restaurant_id', restaurantId)
           .gte('created_at', startOfMonth);
 
         setUsage({
@@ -76,7 +71,17 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
     }
 
     fetchUsage();
-  }, [restaurant.id]);
+  }, [restaurantId]);
+
+  // Defensive: show skeleton if no restaurant
+  if (!restaurant) {
+    return (
+      <div className="bg-card border border-white/10 rounded-xl p-6 animate-pulse">
+        <div className="h-4 bg-white/10 rounded w-1/4 mb-4" />
+        <div className="h-2 bg-white/10 rounded w-full" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
