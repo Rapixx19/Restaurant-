@@ -376,6 +376,10 @@ export async function sendUsageAlert(alert: UsageAlert): Promise<void> {
 /**
  * Increment voice minutes used by an organization.
  * Checks for warning/overage thresholds and sends alerts.
+ *
+ * CRITICAL: Uses atomic SQL update to prevent race conditions during
+ * simultaneous calls. The RPC function ensures voice_minutes_used is
+ * incremented atomically using: SET used = used + minutes
  */
 export async function incrementVoiceMinutes(
   orgId: string,
@@ -383,7 +387,7 @@ export async function incrementVoiceMinutes(
 ): Promise<{ success: boolean; status: LimitStatus; alert?: UsageAlert }> {
   const supabase = await createClient();
 
-  // Get current usage and limits
+  // Get current usage and limits BEFORE incrementing (for alert threshold detection)
   const { data: org } = await supabase
     .from('organizations')
     .select(`
@@ -414,11 +418,12 @@ export async function incrementVoiceMinutes(
   const previousPercent = (currentMinutes / minuteLimit) * 100;
   const newPercent = (newTotal / minuteLimit) * 100;
 
-  // Update the minutes
-  const { error: updateError } = await supabase
-    .from('organizations')
-    .update({ voice_minutes_used: newTotal })
-    .eq('id', orgId);
+  // ATOMIC UPDATE: Call PostgreSQL function that uses: SET used = used + minutes
+  // This prevents race conditions during simultaneous call completions
+  const { error: updateError } = await supabase.rpc('increment_voice_minutes', {
+    p_organization_id: orgId,
+    p_minutes: minutes,
+  });
 
   if (updateError) {
     logger.error('Failed to increment voice minutes', { error: updateError, organizationId: orgId });

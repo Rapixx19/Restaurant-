@@ -727,7 +727,33 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      increment_voice_minutes: {
+        Args: {
+          p_organization_id: string;
+          p_minutes: number;
+        };
+        Returns: undefined;
+      };
+      reset_monthly_voice_minutes: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      create_billing_alert: {
+        Args: {
+          p_organization_id: string;
+          p_alert_type: string;
+          p_severity: string;
+          p_title: string;
+          p_message: string;
+          p_stripe_event_id?: string;
+          p_stripe_invoice_id?: string;
+          p_amount_due?: number;
+          p_metadata?: Json;
+        };
+        Returns: string;
+      };
+    };
     Enums: {
       member_role: 'owner' | 'admin' | 'manager' | 'staff';
       reservation_status: 'pending' | 'confirmed' | 'seated' | 'completed' | 'cancelled' | 'no_show';
