@@ -534,26 +534,64 @@ interface CallLogData {
 
 /**
  * Detect primary language from transcript content.
+ * Uses enhanced pattern matching for reliable detection across environments.
+ *
+ * Focuses on customer messages (not assistant responses) for accuracy.
  */
 function detectLanguageFromTranscript(
   transcript?: Array<{ role: string; content: string }>
 ): string {
   if (!transcript || transcript.length === 0) return 'en';
 
-  const text = transcript.map((t) => t.content).join(' ').toLowerCase();
+  // Extract only the customer's messages for language detection
+  // The assistant's language is predetermined, so we focus on what the caller speaks
+  const customerText = transcript
+    .filter((t) => t.role === 'user' || t.role === 'customer')
+    .map((t) => t.content)
+    .join(' ')
+    .trim();
 
-  // Simple language detection based on common phrases
-  const languagePatterns: Record<string, RegExp[]> = {
-    es: [/hola/i, /gracias/i, /buenos días/i, /por favor/i, /reservación/i],
-    fr: [/bonjour/i, /merci/i, /s'il vous plaît/i, /réservation/i],
-    de: [/guten tag/i, /danke/i, /bitte/i, /reservierung/i],
-    it: [/ciao/i, /grazie/i, /per favore/i, /prenotazione/i],
-    pt: [/olá/i, /obrigado/i, /por favor/i, /reserva/i],
-  };
+  // Need sufficient text for reliable detection (at least 10 chars)
+  if (customerText.length < 10) {
+    return 'en';
+  }
 
-  for (const [lang, patterns] of Object.entries(languagePatterns)) {
-    if (patterns.some((p) => p.test(text))) {
-      return lang;
+  const detectedLang = detectLanguageByPatterns(customerText);
+
+  logger.debug('Language detected from transcript', {
+    detected: detectedLang,
+    textLength: customerText.length,
+    sampleText: customerText.substring(0, 50),
+  });
+
+  return detectedLang;
+}
+
+/**
+ * Fallback pattern-based language detection.
+ * Used when lingua-node is unavailable or fails.
+ */
+function detectLanguageByPatterns(text: string): string {
+  const lowerText = text.toLowerCase();
+
+  // Language patterns with common phrases and unique characters
+  const languagePatterns: Array<{ code: string; patterns: RegExp[] }> = [
+    { code: 'es', patterns: [/hola/i, /gracias/i, /buenos/i, /por favor/i, /reservaci[oó]n/i, /¿/] },
+    { code: 'fr', patterns: [/bonjour/i, /merci/i, /s'il vous/i, /réservation/i, /ç/] },
+    { code: 'de', patterns: [/guten/i, /danke/i, /bitte/i, /reservierung/i, /ß/, /ü/] },
+    { code: 'it', patterns: [/ciao/i, /grazie/i, /per favore/i, /prenotazione/i, /buon/i] },
+    { code: 'pt', patterns: [/olá/i, /obrigado/i, /por favor/i, /reserva/i, /ã/, /ç/] },
+    { code: 'zh', patterns: [/[\u4e00-\u9fff]/] }, // Chinese characters
+    { code: 'ja', patterns: [/[\u3040-\u309f]/, /[\u30a0-\u30ff]/] }, // Hiragana, Katakana
+    { code: 'ko', patterns: [/[\uac00-\ud7af]/] }, // Korean Hangul
+    { code: 'ar', patterns: [/[\u0600-\u06ff]/] }, // Arabic
+    { code: 'ru', patterns: [/[\u0400-\u04ff]/] }, // Cyrillic
+    { code: 'hi', patterns: [/[\u0900-\u097f]/] }, // Devanagari
+  ];
+
+  for (const { code, patterns } of languagePatterns) {
+    if (patterns.some((p) => p.test(lowerText))) {
+      return code;
     }
   }
 
@@ -609,7 +647,7 @@ interface VapiWebhookPayload {
     call?: {
       id: string;
       assistantId?: string;
-      phoneNumber?: { number: string };
+      phoneNumber?: { id?: string; number: string };
       customer?: { number: string; name?: string };
       startedAt?: string;
       endedAt?: string;
@@ -639,6 +677,128 @@ interface VapiWebhookPayload {
       };
     };
   };
+}
+
+// ============================================================
+// TELEPHONY BRIDGE: Lookup restaurant by Vapi phone number ID
+// ============================================================
+
+/**
+ * Find restaurant by Vapi phone number ID.
+ * This is the primary method for the telephony bridge - when a call comes in,
+ * Vapi sends the phoneNumberId, and we lookup which restaurant owns that number.
+ */
+async function findRestaurantByPhoneNumberId(phoneNumberId: string): Promise<{
+  id: string;
+  name: string;
+  phone: string | null;
+  address: { city?: string; street?: string } | null;
+  settings: RestaurantSettings;
+  description: string | null;
+} | null> {
+  const supabase = getSupabase();
+
+  // Query restaurants where settings.voice.vapiPhoneNumberId matches
+  const { data: restaurants, error } = await supabase
+    .from('restaurants')
+    .select('id, name, phone, address, settings, description')
+    .filter('settings->voice->>vapiPhoneNumberId', 'eq', phoneNumberId)
+    .limit(1);
+
+  if (error) {
+    logger.error('Failed to lookup restaurant by phoneNumberId', { error, phoneNumberId });
+    return null;
+  }
+
+  if (!restaurants || restaurants.length === 0) {
+    logger.warn('No restaurant found for phoneNumberId', { phoneNumberId });
+    return null;
+  }
+
+  const restaurant = restaurants[0];
+  return {
+    id: restaurant.id,
+    name: restaurant.name,
+    phone: restaurant.phone,
+    address: restaurant.address as { city?: string; street?: string } | null,
+    settings: (restaurant.settings || {}) as unknown as RestaurantSettings,
+    description: restaurant.description,
+  };
+}
+
+/**
+ * Build a fallback assistant configuration for unknown phone numbers.
+ * This ensures the AI stays polite and helpful even if we can't identify the restaurant.
+ */
+function buildFallbackAssistant() {
+  return {
+    assistant: {
+      name: 'Restaurant Assistant',
+      model: {
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-20250514',
+        systemPrompt: `You are a helpful restaurant assistant. Unfortunately, we're having trouble identifying which restaurant this call is for.
+
+## Your Response
+- Apologize politely for the technical difficulty
+- Ask the caller to try calling back in a moment
+- If they have an urgent reservation or question, offer to take a message
+
+## Guidelines
+- Be warm, professional, and apologetic
+- Keep your responses brief and natural
+- Use conversational fillers like "I'm so sorry about this..." or "Let me see..."
+
+Example: "Hi there! I apologize, but I'm having a small technical hiccup on my end. Could you give me just a moment and try calling back? I'll make sure to help you right away. Thank you so much for your patience!"`,
+        temperature: 0.7,
+      },
+      voice: {
+        provider: 'eleven-labs',
+        voiceId: 'EXAVITQu4vr4xnSDxMaL',
+        stability: 0.5,
+        similarityBoost: 0.75,
+      },
+      firstMessage: "Hi there! I apologize, but I'm experiencing a small technical issue. Could you try calling back in just a moment? Thank you so much for your patience!",
+      transcriber: {
+        provider: 'deepgram',
+        model: 'nova-2',
+        language: 'en',
+      },
+    },
+  };
+}
+
+/**
+ * Build a dynamic first message based on restaurant name, language, and custom greeting.
+ * Creates natural, warm greetings appropriate for each language.
+ */
+function buildDynamicFirstMessage(
+  restaurantName: string,
+  language: string,
+  customGreeting?: string
+): string {
+  // If owner provided a custom greeting, use it (with restaurant name substitution)
+  if (customGreeting && customGreeting.trim()) {
+    return customGreeting.replace(/\[restaurant\]/gi, restaurantName);
+  }
+
+  // Language-specific greetings with warm, professional tone
+  const greetings: Record<string, string> = {
+    en: `Hi! Thanks for calling ${restaurantName}. How can I help you today?`,
+    es: `¡Hola! Gracias por llamar a ${restaurantName}. ¿En qué puedo ayudarle hoy?`,
+    fr: `Bonjour! Merci d'avoir appelé ${restaurantName}. Comment puis-je vous aider?`,
+    de: `Guten Tag! Vielen Dank für Ihren Anruf bei ${restaurantName}. Wie kann ich Ihnen helfen?`,
+    it: `Buongiorno! Grazie per aver chiamato ${restaurantName}. Come posso aiutarla oggi?`,
+    pt: `Olá! Obrigado por ligar para ${restaurantName}. Como posso ajudá-lo hoje?`,
+    zh: `您好！感谢您致电${restaurantName}。今天我能为您做些什么？`,
+    ja: `お電話ありがとうございます。${restaurantName}でございます。本日はどのようなご用件でしょうか？`,
+    ko: `안녕하세요! ${restaurantName}에 전화해 주셔서 감사합니다. 무엇을 도와드릴까요?`,
+    ar: `مرحباً! شكراً لاتصالك بـ ${restaurantName}. كيف يمكنني مساعدتك اليوم؟`,
+    hi: `नमस्ते! ${restaurantName} को कॉल करने के लिए धन्यवाद। मैं आज आपकी कैसे मदद कर सकता हूं?`,
+    ru: `Здравствуйте! Спасибо, что позвонили в ${restaurantName}. Чем могу помочь?`,
+  };
+
+  return greetings[language] || greetings.en;
 }
 
 export async function POST(request: NextRequest) {
@@ -775,7 +935,7 @@ export async function POST(request: NextRequest) {
             message.artifact?.recordingUrl ||
             undefined;
 
-          // Detect language from transcript
+          // Detect language from transcript (customer messages)
           const languageDetected = detectLanguageFromTranscript(message.transcript);
 
           // Calculate call duration in seconds and minutes
@@ -858,36 +1018,89 @@ export async function POST(request: NextRequest) {
 
       // --------------------------------------------------------
       // ASSISTANT REQUEST (Dynamic assistant configuration)
+      // Telephony Bridge: Lookup restaurant by phoneNumberId first
       // --------------------------------------------------------
       case 'assistant-request': {
-        if (!restaurantId) {
-          return NextResponse.json({ assistant: null });
+        // TELEPHONY BRIDGE: Extract phoneNumberId from Vapi payload
+        const phoneNumberId = message.call?.phoneNumber?.id;
+
+        let restaurant: {
+          id: string;
+          name: string;
+          phone: string | null;
+          address: { city?: string; street?: string } | null;
+          settings: RestaurantSettings;
+          description: string | null;
+        } | null = null;
+
+        // PRIMARY: Lookup by phoneNumberId (the telephony bridge)
+        if (phoneNumberId) {
+          logger.debug('Assistant request: looking up by phoneNumberId', { phoneNumberId });
+          restaurant = await findRestaurantByPhoneNumberId(phoneNumberId);
         }
 
-        const supabase = getSupabase();
-        const { data: restaurant } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('id', restaurantId)
-          .single();
+        // FALLBACK: Use restaurantId from metadata or query params
+        if (!restaurant && restaurantId) {
+          logger.debug('Assistant request: falling back to restaurantId', { restaurantId });
+          const supabase = getSupabase();
+          const { data } = await supabase
+            .from('restaurants')
+            .select('id, name, phone, address, settings, description')
+            .eq('id', restaurantId)
+            .single();
 
+          if (data) {
+            restaurant = {
+              id: data.id,
+              name: data.name,
+              phone: data.phone,
+              address: data.address as { city?: string; street?: string } | null,
+              settings: (data.settings || {}) as unknown as RestaurantSettings,
+              description: data.description,
+            };
+          }
+        }
+
+        // SECURITY: If no restaurant found, return fallback assistant
         if (!restaurant) {
-          return NextResponse.json({ assistant: null });
+          logger.warn('Assistant request: no restaurant found, returning fallback', {
+            phoneNumberId,
+            restaurantId,
+          });
+          return NextResponse.json(buildFallbackAssistant());
         }
 
-        const settings = (restaurant.settings || {}) as unknown as RestaurantSettings;
-        const address = restaurant.address as { city?: string } | null;
-        const voiceSettings = settings.voice;
+        // Successfully identified restaurant via telephony bridge
+        logger.info('Assistant request: restaurant identified', {
+          restaurantId: restaurant.id,
+          restaurantName: restaurant.name,
+          phoneNumberId,
+        });
 
+        const settings = restaurant.settings;
+        const voiceSettings = settings.voice;
+        const aiSettings = settings.ai;
+
+        // Build the humanistic system prompt
         const systemPrompt = buildVoiceSystemPrompt({
           restaurantName: restaurant.name,
           restaurantPhone: restaurant.phone || undefined,
-          city: address?.city,
-          allowReservations: settings.ai?.allowReservations ?? false,
-          allowOrders: settings.ai?.allowOrders ?? false,
-          personality: settings.ai?.personality,
-          customInstructions: settings.ai?.customInstructions,
+          city: restaurant.address?.city,
+          allowReservations: aiSettings?.allowReservations ?? false,
+          allowOrders: aiSettings?.allowOrders ?? false,
+          personality: aiSettings?.personality,
+          customInstructions: aiSettings?.customInstructions,
+          ownerNotes: restaurant.description || undefined,
         });
+
+        // Build dynamic first message based on settings
+        const primaryLanguage = voiceSettings?.primaryLanguage || 'en';
+        const customGreeting = aiSettings?.greeting;
+        const firstMessage = buildDynamicFirstMessage(
+          restaurant.name,
+          primaryLanguage,
+          customGreeting
+        );
 
         return NextResponse.json({
           assistant: {
@@ -904,11 +1117,11 @@ export async function POST(request: NextRequest) {
               stability: 0.5,
               similarityBoost: 0.75,
             },
-            firstMessage: 'Hi! Thanks for calling ' + restaurant.name + '. How can I help you today?',
+            firstMessage,
             transcriber: {
               provider: 'deepgram',
               model: 'nova-2',
-              language: 'en',
+              language: primaryLanguage,
             },
             tools: VAPI_TOOLS,
             metadata: {

@@ -87,7 +87,6 @@ export async function updateVoice(
     .eq('id', restaurantId);
 
   if (updateError) {
-    console.error('Update error:', updateError);
     return {
       error: 'Failed to update voice settings',
       success: false,
@@ -174,14 +173,12 @@ export async function triggerTestCall(
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Vapi call error:', errorData);
       return { success: false, error: 'Failed to initiate call: ' + (errorData.message || 'Unknown error') };
     }
 
     const data = await response.json();
     return { success: true, callId: data.id };
-  } catch (error) {
-    console.error('Test call error:', error);
+  } catch {
     return { success: false, error: 'Failed to connect to Vapi' };
   }
 }
