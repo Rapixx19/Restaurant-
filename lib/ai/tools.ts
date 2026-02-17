@@ -132,6 +132,59 @@ export const AI_TOOLS: Tool[] = [
       required: ['customer_name', 'customer_phone', 'date', 'time', 'party_size'],
     },
   },
+  {
+    name: 'start_order_checkout',
+    description: 'Start the checkout process for a food order. Use this after the customer has confirmed their order. The tool validates item availability, calculates the total with tax, and returns a secure payment link. Before calling this, confirm the order details with the customer and collect their name and phone number.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        items: {
+          type: 'array',
+          description: 'Array of items to order. Each item must have an id (menu item UUID) and quantity.',
+          items: {
+            type: 'object',
+            properties: {
+              id: {
+                type: 'string',
+                description: 'The UUID of the menu item',
+              },
+              quantity: {
+                type: 'number',
+                description: 'Number of this item to order',
+              },
+              notes: {
+                type: 'string',
+                description: 'Special instructions for this item (e.g., "no onions")',
+              },
+            },
+            required: ['id', 'quantity'],
+          },
+        },
+        customer_name: {
+          type: 'string',
+          description: 'Customer name for the order',
+        },
+        customer_phone: {
+          type: 'string',
+          description: 'Customer phone number',
+        },
+        customer_email: {
+          type: 'string',
+          description: 'Optional customer email for receipt',
+        },
+        order_type: {
+          type: 'string',
+          enum: ['dine_in', 'takeout', 'delivery'],
+          description: 'Type of order. Defaults to takeout.',
+        },
+        special_instructions: {
+          type: 'string',
+          description: 'Special instructions for the entire order',
+        },
+      },
+      required: ['items', 'customer_name', 'customer_phone'],
+    },
+  },
 ];
 
 export type ToolName =
@@ -140,4 +193,5 @@ export type ToolName =
   | 'check_opening_hours'
   | 'get_restaurant_info'
   | 'check_availability'
-  | 'book_table';
+  | 'book_table'
+  | 'start_order_checkout';

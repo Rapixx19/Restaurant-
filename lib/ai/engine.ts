@@ -8,6 +8,7 @@ import {
   bookReservation,
   formatConfirmation,
 } from '@/lib/reservations/availability';
+import { createOrder, formatOrderSummary } from '@/lib/orders/service';
 import type { Restaurant, MenuItem, MenuCategory } from '@/lib/database.types';
 import type { RestaurantSettings, TierId, OperatingHours, DayOfWeek } from '@/modules/settings/types';
 
@@ -76,7 +77,7 @@ Be ${personality}
 
 ## Capabilities
 ${settings.ai?.allowReservations ? '- You CAN make reservations directly. Use the check_availability tool first, then collect customer name and phone, then use book_table to confirm.' : '- Reservations are handled by phone only'}
-${settings.ai?.allowOrders ? '- You CAN help with orders (but cannot actually place them yet - inform customers to call)' : '- Orders are handled by phone only'}
+${settings.ai?.allowOrders ? '- You CAN take food orders directly. First help the customer choose items using get_menu_items, then summarize their order clearly, collect their name and phone number, and use start_order_checkout to generate a secure payment link.' : '- Orders are handled by phone only'}
 
 ## Menu Overview
 The restaurant has ${menuItems.length} menu items across ${categories.length} categories.
@@ -94,9 +95,11 @@ ${settings.ai?.customInstructions || 'None provided'}
 3. If you don't know something, say so honestly
 4. Keep responses concise but informative
 5. For reservations: ALWAYS use check_availability first, then collect name and phone, then use book_table
-6. Never make up information about prices, ingredients, or availability
-7. Be aware of dietary restrictions and allergens - this is important for customer safety
-8. When suggesting reservation times, use 24-hour format internally but display times in 12-hour format to customers`;
+6. For orders: Help the customer build their order, summarize it clearly with items and quantities, collect name and phone, then use start_order_checkout to generate a payment link
+7. Never make up information about prices, ingredients, or availability
+8. Be aware of dietary restrictions and allergens - this is important for customer safety
+9. When suggesting times, use 24-hour format internally but display times in 12-hour format to customers
+10. When taking orders, always confirm the order summary before generating the checkout link`;
 
   return systemPrompt;
 }
@@ -296,6 +299,43 @@ Website: ${restaurant.website || 'Not available'}`;
         return formatConfirmation(customerName, date, time, partySize);
       } else {
         return result.error || 'Sorry, there was an issue booking your reservation. Please try again or call us directly.';
+      }
+    }
+
+    case 'start_order_checkout': {
+      if (!settings.ai?.allowOrders) {
+        return 'Online ordering is not available. Please call the restaurant directly to place an order.';
+      }
+
+      const items = toolInput.items as Array<{ id: string; quantity: number; notes?: string }>;
+      const customerName = toolInput.customer_name as string;
+      const customerPhone = toolInput.customer_phone as string;
+      const customerEmail = toolInput.customer_email as string | undefined;
+      const orderType = (toolInput.order_type as 'dine_in' | 'takeout' | 'delivery') || 'takeout';
+      const specialInstructions = toolInput.special_instructions as string | undefined;
+
+      if (!items || items.length === 0) {
+        return 'No items provided for the order. Please specify which menu items you would like to order.';
+      }
+
+      const result = await createOrder({
+        restaurantId: restaurant.id,
+        items,
+        customerName,
+        customerPhone,
+        customerEmail,
+        orderType,
+        specialInstructions,
+      });
+
+      if (result.success && result.checkoutUrl) {
+        return `Your order has been created. Please complete your payment using this secure link:
+
+${result.checkoutUrl}
+
+This link will expire in 30 minutes. Once payment is confirmed, we'll start preparing your order right away!`;
+      } else {
+        return result.error || 'Sorry, there was an issue creating your order. Please try again or call us directly.';
       }
     }
 

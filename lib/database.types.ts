@@ -48,6 +48,7 @@ export type Database = {
         Row: {
           id: string;
           owner_id: string;
+          organization_id: string | null;
           name: string;
           slug: string;
           description: string | null;
@@ -65,6 +66,7 @@ export type Database = {
         Insert: {
           id?: string;
           owner_id: string;
+          organization_id?: string | null;
           name: string;
           slug: string;
           description?: string | null;
@@ -82,6 +84,7 @@ export type Database = {
         Update: {
           id?: string;
           owner_id?: string;
+          organization_id?: string | null;
           name?: string;
           slug?: string;
           description?: string | null;
@@ -406,7 +409,7 @@ export type Database = {
           customer_id: string | null;
           caller_phone: string;
           direction: 'inbound' | 'outbound';
-          status: 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
+          status: 'active' | 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
           duration_seconds: number | null;
           started_at: string;
           ended_at: string | null;
@@ -416,6 +419,7 @@ export type Database = {
           intent: string | null;
           actions_taken: Json;
           recording_url: string | null;
+          language_detected: string | null;
           cost: number | null;
           metadata: Json;
           created_at: string;
@@ -427,7 +431,7 @@ export type Database = {
           customer_id?: string | null;
           caller_phone: string;
           direction?: 'inbound' | 'outbound';
-          status?: 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
+          status?: 'active' | 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
           duration_seconds?: number | null;
           started_at?: string;
           ended_at?: string | null;
@@ -437,6 +441,7 @@ export type Database = {
           intent?: string | null;
           actions_taken?: Json;
           recording_url?: string | null;
+          language_detected?: string | null;
           cost?: number | null;
           metadata?: Json;
           created_at?: string;
@@ -448,7 +453,7 @@ export type Database = {
           customer_id?: string | null;
           caller_phone?: string;
           direction?: 'inbound' | 'outbound';
-          status?: 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
+          status?: 'active' | 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
           duration_seconds?: number | null;
           started_at?: string;
           ended_at?: string | null;
@@ -458,6 +463,7 @@ export type Database = {
           intent?: string | null;
           actions_taken?: Json;
           recording_url?: string | null;
+          language_detected?: string | null;
           cost?: number | null;
           metadata?: Json;
           created_at?: string;
@@ -530,6 +536,195 @@ export type Database = {
         };
         Relationships: [];
       };
+      plan_configs: {
+        Row: {
+          id: string;
+          name: string;
+          display_name: string;
+          description: string | null;
+          price_eur: number | null; // Nullable for Enterprise "Contact Us" pricing
+          price_interval: 'month' | 'year';
+          location_limit: number;
+          minute_limit: number;
+          features: Json;
+          stripe_price_id: string | null;
+          stripe_product_id: string | null;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          display_name: string;
+          description?: string | null;
+          price_eur?: number | null;
+          price_interval?: 'month' | 'year';
+          location_limit?: number;
+          minute_limit?: number;
+          features?: Json;
+          stripe_price_id?: string | null;
+          stripe_product_id?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          display_name?: string;
+          description?: string | null;
+          price_eur?: number | null;
+          price_interval?: 'month' | 'year';
+          location_limit?: number;
+          minute_limit?: number;
+          features?: Json;
+          stripe_price_id?: string | null;
+          stripe_product_id?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      organizations: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          slug: string | null;
+          plan_id: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_status: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete';
+          voice_minutes_used: number;
+          voice_minutes_reset_at: string;
+          billing_email: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          slug?: string | null;
+          plan_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete';
+          voice_minutes_used?: number;
+          voice_minutes_reset_at?: string;
+          billing_email?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          slug?: string | null;
+          plan_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          subscription_status?: 'active' | 'past_due' | 'canceled' | 'trialing' | 'incomplete';
+          voice_minutes_used?: number;
+          voice_minutes_reset_at?: string;
+          billing_email?: string | null;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      organization_members: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          role: 'owner' | 'admin' | 'manager' | 'viewer';
+          invited_by: string | null;
+          invited_at: string | null;
+          joined_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          role?: 'owner' | 'admin' | 'manager' | 'viewer';
+          invited_by?: string | null;
+          invited_at?: string | null;
+          joined_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          role?: 'owner' | 'admin' | 'manager' | 'viewer';
+          invited_by?: string | null;
+          invited_at?: string | null;
+          joined_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      billing_alerts: {
+        Row: {
+          id: string;
+          organization_id: string;
+          alert_type: 'payment_failed' | 'subscription_canceled' | 'subscription_past_due' | 'approaching_limit' | 'limit_reached' | 'subscription_renewed';
+          severity: 'info' | 'warning' | 'error';
+          title: string;
+          message: string;
+          stripe_event_id: string | null;
+          stripe_invoice_id: string | null;
+          amount_due: number | null;
+          currency: string;
+          metadata: Json;
+          acknowledged_at: string | null;
+          acknowledged_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          alert_type: 'payment_failed' | 'subscription_canceled' | 'subscription_past_due' | 'approaching_limit' | 'limit_reached' | 'subscription_renewed';
+          severity?: 'info' | 'warning' | 'error';
+          title: string;
+          message: string;
+          stripe_event_id?: string | null;
+          stripe_invoice_id?: string | null;
+          amount_due?: number | null;
+          currency?: string;
+          metadata?: Json;
+          acknowledged_at?: string | null;
+          acknowledged_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          alert_type?: 'payment_failed' | 'subscription_canceled' | 'subscription_past_due' | 'approaching_limit' | 'limit_reached' | 'subscription_renewed';
+          severity?: 'info' | 'warning' | 'error';
+          title?: string;
+          message?: string;
+          stripe_event_id?: string | null;
+          stripe_invoice_id?: string | null;
+          amount_due?: number | null;
+          currency?: string;
+          metadata?: Json;
+          acknowledged_at?: string | null;
+          acknowledged_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -540,7 +735,7 @@ export type Database = {
       order_type: 'dine_in' | 'takeout' | 'delivery';
       interaction_source: 'phone' | 'chat' | 'website' | 'walk_in' | 'manual';
       call_direction: 'inbound' | 'outbound';
-      call_status: 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
+      call_status: 'active' | 'initiated' | 'ringing' | 'in_progress' | 'completed' | 'failed' | 'no_answer';
       sentiment_type: 'positive' | 'neutral' | 'negative';
       payment_status: 'pending' | 'paid' | 'refunded';
       chat_role: 'user' | 'assistant' | 'system';
@@ -571,3 +766,7 @@ export type Order = Tables<'orders'>;
 export type CallLog = Tables<'call_logs'>;
 export type ChatSession = Tables<'chat_sessions'>;
 export type ChatMessage = Tables<'chat_messages'>;
+export type PlanConfig = Tables<'plan_configs'>;
+export type Organization = Tables<'organizations'>;
+export type OrganizationMember = Tables<'organization_members'>;
+export type BillingAlert = Tables<'billing_alerts'>;

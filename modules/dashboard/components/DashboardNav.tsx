@@ -16,14 +16,21 @@ import {
   X,
   ChevronDown,
   Store,
+  BarChart2,
+  Phone,
+  Building2,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logout } from '@/modules/auth/actions/logout';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import type { DashboardNavProps, NavItem } from '../types';
 
 const navItems: NavItem[] = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Analytics', href: '/dashboard/analytics', icon: BarChart2 },
   { label: 'Conversations', href: '/dashboard/conversations', icon: MessageCircle },
+  { label: 'Calls', href: '/dashboard/calls', icon: Phone },
   { label: 'Reservations', href: '/dashboard/reservations', icon: CalendarCheck },
   { label: 'Orders', href: '/dashboard/orders', icon: ShoppingBag },
   { label: 'Menu', href: '/dashboard/menu', icon: UtensilsCrossed },
@@ -43,9 +50,55 @@ function isNavItemActive(href: string, pathname: string): boolean {
 }
 
 /**
+ * Progress bar component for usage display.
+ */
+function UsageProgressBar({
+  current,
+  max,
+  label,
+  unit,
+}: {
+  current: number;
+  max: number;
+  label: string;
+  unit: string;
+}) {
+  const percentage = max > 0 ? Math.min((current / max) * 100, 100) : 0;
+  const isNearLimit = percentage >= 80;
+  const isAtLimit = percentage >= 100;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400">{label}</span>
+        <span className={cn(
+          'font-medium',
+          isAtLimit ? 'text-red-400' : isNearLimit ? 'text-amber-400' : 'text-gray-300'
+        )}>
+          {current.toLocaleString()} / {max.toLocaleString()} {unit}
+        </span>
+      </div>
+      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all duration-500',
+            isAtLimit
+              ? 'bg-red-500'
+              : isNearLimit
+                ? 'bg-amber-500'
+                : 'bg-electric-blue'
+          )}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Dashboard navigation sidebar and mobile header.
  */
-export function DashboardNav({ user, profile, restaurant }: DashboardNavProps) {
+export function DashboardNav({ user, profile, restaurant, organizationUsage }: DashboardNavProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -57,6 +110,20 @@ export function DashboardNav({ user, profile, restaurant }: DashboardNavProps) {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+
+  // Plan display name mapping
+  const getPlanBadgeColor = (planName: string) => {
+    switch (planName) {
+      case 'enterprise':
+        return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case 'professional':
+        return 'bg-electric-blue/20 text-electric-blue border-electric-blue/30';
+      case 'starter':
+        return 'bg-green-500/20 text-green-400 border-green-500/30';
+      default:
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    }
+  };
 
   // Don't show full nav during onboarding
   const isOnboarding = pathname === '/onboarding';
@@ -179,6 +246,51 @@ export function DashboardNav({ user, profile, restaurant }: DashboardNavProps) {
             );
           })}
         </nav>
+
+        {/* Usage Section */}
+        {organizationUsage && (
+          <div className="px-4 py-4 border-t border-white/10">
+            {/* Plan Badge */}
+            <div className="flex items-center justify-between mb-3">
+              <span className={cn(
+                'px-2 py-0.5 text-xs font-medium rounded-full border',
+                getPlanBadgeColor(organizationUsage.planName)
+              )}>
+                {organizationUsage.planDisplayName}
+              </span>
+              {organizationUsage.planName !== 'enterprise' && (
+                <Link
+                  href="/dashboard/settings/billing"
+                  className="text-xs text-electric-blue hover:underline flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Upgrade
+                </Link>
+              )}
+            </div>
+
+            {/* Voice Minutes Usage */}
+            <ErrorBoundary componentName="UsageProgressBar" minimal>
+              <UsageProgressBar
+                current={organizationUsage.voiceMinutesUsed}
+                max={organizationUsage.voiceMinutesLimit}
+                label="Voice Minutes"
+                unit="mins"
+              />
+            </ErrorBoundary>
+
+            {/* Manage Organization Link (owners only) */}
+            {organizationUsage.isOwner && organizationUsage.organizationId && (
+              <Link
+                href="/dashboard/settings/organization"
+                className="flex items-center gap-2 mt-3 px-3 py-2 text-sm text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              >
+                <Building2 className="w-4 h-4" />
+                Manage Organization
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* User Menu */}
         <div className="p-4 border-t border-white/10">

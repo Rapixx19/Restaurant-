@@ -1,5 +1,6 @@
 import { createClient as createAnonClient } from '@supabase/supabase-js';
 import type { RestaurantSettings, OperatingHours, DayOfWeek } from '@/modules/settings/types';
+import { sendReservationConfirmation } from '@/lib/notifications';
 
 interface AvailabilityResult {
   available: boolean;
@@ -357,6 +358,14 @@ export async function bookReservation(input: ReservationInput): Promise<BookingR
       error: 'Failed to create reservation. Please try again.',
     };
   }
+
+  // Send confirmation notification (email + SMS)
+  // Fire and forget - don't block the response
+  sendReservationConfirmation(reservation.id).then((result) => {
+    console.log('Reservation confirmation notification:', result);
+  }).catch((err) => {
+    console.error('Failed to send reservation confirmation:', err);
+  });
 
   return {
     success: true,

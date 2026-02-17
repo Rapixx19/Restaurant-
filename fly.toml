@@ -1,0 +1,59 @@
+# ============================================
+# VECTERAI Fly.io Configuration
+# Deploy: fly deploy
+# ============================================
+
+app = "vecterai"
+primary_region = "iad"
+
+[build]
+  [build.args]
+    NEXT_PUBLIC_SUPABASE_URL = "https://fnztwkoguzdpbtddiqlz.supabase.co"
+    NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZuenR3a29ndXpkcGJ0ZGRpcWx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyNDE4NzQsImV4cCI6MjA4NjgxNzg3NH0.oSD7-cu5fbSzoqy3QZDf7TfUJh-oRaHEXRtwou6qFI8"
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_51T1Ry22Hv8ddkChmCBFc7il123gglFDig98v9xMz5YLMSF1nnsHwrBXOHE6R9CAPQUaOPv4RRpIFLs4pmZB9Y7JY00NgVPru7p"
+    NEXT_PUBLIC_VAPI_PUBLIC_KEY = "2d76a0b4-58fd-4694-a708-eba959d9306d"
+    NEXT_PUBLIC_APP_URL = "https://vecterai.fly.dev"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# Scale up for production
+# [[vm]]
+#   memory = "1gb"
+#   cpu_kind = "shared"
+#   cpus = 2
+
+[deploy]
+  release_command = ""
+  strategy = "rolling"
+
+# Metrics endpoint for monitoring
+[metrics]
+  port = 9091
+  path = "/metrics"

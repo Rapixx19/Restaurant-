@@ -1,0 +1,105 @@
+# ============================================
+# VECTERAI CI/CD Pipeline
+# Deploys to Fly.io on push to main
+# ============================================
+
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+jobs:
+  # ----------------------------------------
+  # Build & Test
+  # ----------------------------------------
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run type check
+        run: npx tsc --noEmit
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Provide dummy env vars for build (actual values set in Fly.io)
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          ANTHROPIC_API_KEY: sk-ant-placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          VAPI_API_KEY: placeholder
+          NEXT_PUBLIC_VAPI_PUBLIC_KEY: placeholder
+
+  # ----------------------------------------
+  # Deploy to Fly.io
+  # ----------------------------------------
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://vecterai.fly.dev/api/health || exit 1
+
+  # ----------------------------------------
+  # Notify on completion
+  # ----------------------------------------
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+    steps:
+      - name: Deployment succeeded
+        if: ${{ needs.deploy.result == 'success' }}
+        run: |
+          echo "Deployment successful!"
+          echo "App URL: https://vecterai.fly.dev"
+
+      - name: Deployment failed
+        if: ${{ needs.deploy.result == 'failure' }}
+        run: |
+          echo "Deployment failed!"
+          exit 1
