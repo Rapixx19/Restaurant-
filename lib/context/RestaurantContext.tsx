@@ -64,6 +64,22 @@ export function RestaurantProvider({
   restaurant,
   organizationUsage,
 }: RestaurantProviderProps) {
+  // Debug logging for hydration issues
+  if (typeof window !== 'undefined') {
+    console.log('🍽️ RestaurantProvider Data:', {
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      hasProfile: !!profile,
+      profileName: profile?.full_name,
+      hasRestaurant: !!restaurant,
+      restaurantId: restaurant?.id,
+      restaurantName: restaurant?.name,
+      organizationId: restaurant?.organization_id,
+      hasOrganizationUsage: !!organizationUsage,
+    });
+  }
+
   const value: RestaurantContextValue = {
     user,
     profile,
@@ -91,6 +107,15 @@ export function useRestaurant(): RestaurantContextValue {
   const context = useContext(RestaurantContext);
 
   if (!context) {
+    // Enhanced error logging for debugging hydration issues
+    if (typeof window !== 'undefined') {
+      console.error('🚨 useRestaurant Error:', {
+        error: 'Context is null - component rendered outside RestaurantProvider',
+        stack: new Error().stack,
+        location: window.location.pathname,
+      });
+    }
+
     throw new Error(
       'useRestaurant must be used within a RestaurantProvider. ' +
       'Wrap your component tree with <RestaurantProvider>.'
