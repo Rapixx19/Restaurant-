@@ -19,15 +19,18 @@ export default async function OnboardingPage() {
     redirect('/login');
   }
 
-  // Check if user already has a restaurant
-  const { data: restaurant } = await supabase
+  const userId = user.id as string;
+
+  // Check if user already has a restaurant - use limit(1) to avoid throwing
+
+  const { data: restaurants } = await (supabase as any)
     .from('restaurants')
     .select('id')
-    .eq('owner_id', user.id)
-    .single();
+    .eq('owner_id', userId)
+    .limit(1);
 
   // If they already have a restaurant, redirect to dashboard
-  if (restaurant) {
+  if (restaurants?.[0]) {
     redirect('/dashboard');
   }
 

@@ -126,17 +126,23 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const { data: profile } = await supabase
+  const userId = user.id as string;
+
+  // Use .limit(1) instead of .single() to avoid throwing on 0 results
+  const { data: profiles } = await (supabase as any)
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
-    .single() as { data: Profile | null };
+    .eq('id', userId)
+    .limit(1) as { data: Profile[] | null };
+
+  // Safely get profile (may be null if trigger hasn't run yet)
+  const profile = profiles?.[0] ?? null;
 
   // Fetch ALL restaurants for this user
-  const { data: restaurants } = await supabase
+  const { data: restaurants } = await (supabase as any)
     .from('restaurants')
     .select('*')
-    .eq('owner_id', user.id)
+    .eq('owner_id', userId)
     .order('created_at', { ascending: true }) as { data: Restaurant[] | null };
 
   if (!restaurants || restaurants.length === 0) {
@@ -206,17 +212,17 @@ export default async function DashboardPage() {
         twilioNumber={twilioNumber}
       />
 
-      {/* Usage Banner - with defensive restaurant prop */}
-      {restaurant && <UsageBanner restaurant={restaurant} />}
+      {/* Usage Banner - uses RestaurantContext */}
+      <UsageBanner />
 
-      {/* Stats Grid - with defensive restaurantId */}
-      <StatCards restaurantId={restaurant?.id ?? ''} />
+      {/* Stats Grid - uses RestaurantContext */}
+      <StatCards />
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed - Takes 2 columns */}
+        {/* Activity Feed - uses RestaurantContext */}
         <div className="lg:col-span-2">
-          <ActivityFeed restaurantId={restaurant?.id ?? ''} />
+          <ActivityFeed />
         </div>
 
         {/* Quick Actions - Takes 1 column */}

@@ -20,13 +20,17 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
-  // Fetch user's restaurant
-  const { data: restaurant } = await supabase
+  const userId = user.id as string;
+
+  // Use limit(1) instead of single() to avoid throwing on 0 results
+
+  const { data: restaurants } = (await (supabase as any)
     .from('restaurants')
     .select('*')
-    .eq('owner_id', user.id)
-    .single() as { data: Restaurant | null };
+    .eq('owner_id', userId)
+    .limit(1)) as { data: Restaurant[] | null };
 
+  const restaurant = (restaurants?.[0] ?? null) as Restaurant | null;
   if (!restaurant) {
     redirect('/onboarding');
   }

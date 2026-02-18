@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRestaurant } from '@/lib/context';
 import type { Reservation } from '@/lib/database.types';
 import { ReservationCard } from './ReservationCard';
 import { ReservationFilters } from './ReservationFilters';
@@ -9,11 +10,14 @@ import { NewReservationModal, type NewReservationData } from './NewReservationMo
 import type { ReservationStatus } from '../types';
 
 interface ReservationsTableProps {
-  restaurantId: string;
   initialReservations: Reservation[];
 }
 
-export function ReservationsTable({ restaurantId, initialReservations }: ReservationsTableProps) {
+/**
+ * ReservationsTable - uses RestaurantContext for restaurantId.
+ */
+export function ReservationsTable({ initialReservations }: ReservationsTableProps) {
+  const { restaurantId } = useRestaurant();
   const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
   const [filteredReservations, setFilteredReservations] = useState<Reservation[]>(initialReservations);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,14 +36,18 @@ export function ReservationsTable({ restaurantId, initialReservations }: Reserva
 
   const supabase = createClient();
 
+  // Capture non-null reference for callbacks (TypeScript narrowing)
+  const restId = restaurantId ?? '';
+
   // Fetch reservations for selected date
   const fetchReservations = useCallback(async (date: string) => {
+    if (!restId) return;
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('reservations')
         .select('*')
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', restId)
         .eq('reservation_date', date)
         .order('reservation_time', { ascending: true });
 
@@ -50,7 +58,7 @@ export function ReservationsTable({ restaurantId, initialReservations }: Reserva
     } finally {
       setIsLoading(false);
     }
-  }, [restaurantId, supabase]);
+  }, [restId, supabase]);
 
   // Apply filters
   useEffect(() => {
@@ -79,15 +87,16 @@ export function ReservationsTable({ restaurantId, initialReservations }: Reserva
 
   // Set up Supabase Realtime subscription
   useEffect(() => {
+    if (!restId) return;
     const channel = supabase
-      .channel(`reservations:${restaurantId}`)
+      .channel(`reservations:${restId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'reservations',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${restId}`,
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -116,7 +125,7 @@ export function ReservationsTable({ restaurantId, initialReservations }: Reserva
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [restaurantId, selectedDate, supabase]);
+  }, [restId, selectedDate, supabase]);
 
   const handleStatusChange = async (id: string, newStatus: ReservationStatus) => {
     const { error } = await supabase
@@ -135,9 +144,10 @@ export function ReservationsTable({ restaurantId, initialReservations }: Reserva
   };
 
   const handleCreateReservation = async (data: NewReservationData): Promise<{ success: boolean; error?: string }> => {
+    if (!restId) return { success: false, error: 'Restaurant not found' };
     try {
       const { error } = await supabase.from('reservations').insert({
-        restaurant_id: restaurantId,
+        restaurant_id: restId,
         customer_name: data.customerName,
         customer_phone: data.customerPhone,
         customer_email: data.customerEmail || null,

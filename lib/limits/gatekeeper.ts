@@ -60,7 +60,7 @@ export async function getOrganizationLimits(orgId: string): Promise<PlanLimits |
   const supabase = await createClient();
 
   // Get organization with plan info
-  const { data: org, error: orgError } = await supabase
+  const { data: org, error: orgError } = await (supabase as any)
     .from('organizations')
     .select(`
       id,
@@ -88,7 +88,7 @@ export async function getOrganizationLimits(orgId: string): Promise<PlanLimits |
   }
 
   // Count restaurants in organization
-  const { count: locationCount } = await supabase
+  const { count: locationCount } = await (supabase as any)
     .from('restaurants')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', orgId);
@@ -258,7 +258,7 @@ export async function sendUsageAlert(alert: UsageAlert): Promise<void> {
   const supabase = await createClient();
 
   // Get organization details for alert
-  const { data: org } = await supabase
+  const { data: org } = await (supabase as any)
     .from('organizations')
     .select('name, owner_id, profiles(email)')
     .eq('id', alert.organizationId)
@@ -388,7 +388,7 @@ export async function incrementVoiceMinutes(
   const supabase = await createClient();
 
   // Get current usage and limits BEFORE incrementing (for alert threshold detection)
-  const { data: org } = await supabase
+  const { data: org } = await (supabase as any)
     .from('organizations')
     .select(`
       name,
@@ -471,7 +471,7 @@ export async function getUserOrganizationId(userId: string): Promise<string | nu
   const supabase = await createClient();
 
   // First check if user owns an organization
-  const { data: ownedOrg } = await supabase
+  const { data: ownedOrg } = await (supabase as any)
     .from('organizations')
     .select('id')
     .eq('owner_id', userId)
@@ -482,7 +482,7 @@ export async function getUserOrganizationId(userId: string): Promise<string | nu
   }
 
   // Check if user is a member of an organization
-  const { data: membership } = await supabase
+  const { data: membership } = await (supabase as any)
     .from('organization_members')
     .select('organization_id')
     .eq('user_id', userId)
@@ -497,7 +497,7 @@ export async function getUserOrganizationId(userId: string): Promise<string | nu
 export async function getRestaurantOrganizationId(restaurantId: string): Promise<string | null> {
   const supabase = await createClient();
 
-  const { data: restaurant } = await supabase
+  const { data: restaurant } = await (supabase as any)
     .from('restaurants')
     .select('organization_id')
     .eq('id', restaurantId)

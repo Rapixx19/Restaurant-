@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react';
 import { CalendarCheck, ShoppingBag, Users, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-
-interface StatCardsProps {
-  restaurantId: string;
-}
+import { useRestaurant } from '@/lib/context';
 
 interface Stats {
   reservationsToday: number;
@@ -48,8 +45,10 @@ function StatCard({ label, value, icon: Icon, color, loading }: StatCardProps) {
 
 /**
  * Grid of stat cards showing live dashboard metrics.
+ * Uses RestaurantContext for restaurantId - no props needed.
  */
-export function StatCards({ restaurantId }: StatCardsProps) {
+export function StatCards() {
+  const { restaurantId } = useRestaurant();
   const [stats, setStats] = useState<Stats>({
     reservationsToday: 0,
     ordersToday: 0,
@@ -65,6 +64,9 @@ export function StatCards({ restaurantId }: StatCardsProps) {
       setLoading(false);
       return;
     }
+
+    // Capture non-null reference for closures (TypeScript narrowing)
+    const restId = restaurantId;
 
     async function fetchStats() {
       try {
@@ -91,7 +93,7 @@ export function StatCards({ restaurantId }: StatCardsProps) {
           supabase
             .from('reservations')
             .select('id', { count: 'exact', head: true })
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .gte('date', todayStart.split('T')[0])
             .lt('date', todayEnd.split('T')[0]),
 
@@ -99,7 +101,7 @@ export function StatCards({ restaurantId }: StatCardsProps) {
           supabase
             .from('orders')
             .select('id', { count: 'exact', head: true })
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .gte('created_at', todayStart)
             .lt('created_at', todayEnd),
 
@@ -107,14 +109,14 @@ export function StatCards({ restaurantId }: StatCardsProps) {
           supabase
             .from('customers')
             .select('id', { count: 'exact', head: true })
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .gte('created_at', weekStart),
 
           // Active chat sessions
           supabase
             .from('chat_sessions')
             .select('id', { count: 'exact', head: true })
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .eq('status', 'active'),
         ]);
 

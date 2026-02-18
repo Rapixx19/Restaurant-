@@ -19,11 +19,6 @@ interface OnboardingStatusBannerProps {
  * - suspended: Account suspended message
  */
 export function OnboardingStatusBanner({ status, twilioNumber }: OnboardingStatusBannerProps) {
-  // Debug logging for hydration issues
-  if (typeof window !== 'undefined') {
-    console.log('[OnboardingStatusBanner] Status:', status, 'TwilioNumber:', twilioNumber);
-  }
-
   // Defensive: handle undefined status during hydration
   const safeStatus = status || 'active';
 

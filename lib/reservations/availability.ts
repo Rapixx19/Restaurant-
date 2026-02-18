@@ -361,9 +361,7 @@ export async function bookReservation(input: ReservationInput): Promise<BookingR
 
   // Send confirmation notification (email + SMS)
   // Fire and forget - don't block the response
-  sendReservationConfirmation(reservation.id).then((result) => {
-    console.log('Reservation confirmation notification:', result);
-  }).catch((err) => {
+  sendReservationConfirmation(reservation.id).catch((err) => {
     console.error('Failed to send reservation confirmation:', err);
   });
 

@@ -235,13 +235,14 @@ export default function CallHistoryPage() {
         return;
       }
 
-      // Get restaurant
-      const { data: restaurant } = await supabase
+      // Get restaurant - use limit(1) instead of single() to avoid throwing
+      const { data: restaurants } = await supabase
         .from('restaurants')
         .select('id')
         .eq('owner_id', user.id)
-        .single();
+        .limit(1);
 
+      const restaurant = restaurants?.[0];
       if (!restaurant) {
         setError('No restaurant found');
         setLoading(false);

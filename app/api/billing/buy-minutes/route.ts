@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Organization ID required' }, { status: 400 });
     }
 
+    const userId = user.id as string;
+
     // Verify user has access to this organization
-    const { data: org } = await supabase
+    const { data: org } = await (supabase as any)
       .from('organizations')
       .select('id, name, stripe_customer_id')
       .eq('id', organizationId)
@@ -60,18 +62,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user owns or is member of this organization
-    const { data: ownership } = await supabase
+    const { data: ownership } = await (supabase as any)
       .from('organizations')
       .select('id')
       .eq('id', organizationId)
-      .eq('owner_id', user.id)
+      .eq('owner_id', userId)
       .single();
 
-    const { data: membership } = await supabase
+    const { data: membership } = await (supabase as any)
       .from('organization_members')
       .select('id')
       .eq('organization_id', organizationId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single();
 
     if (!ownership && !membership) {
@@ -96,7 +98,7 @@ export async function POST(request: NextRequest) {
       stripeCustomerId = customer.id;
 
       // Save customer ID to organization
-      await supabase
+      await (supabase as any)
         .from('organizations')
         .update({ stripe_customer_id: stripeCustomerId })
         .eq('id', organizationId);

@@ -52,7 +52,7 @@ export async function GET() {
     };
 
     // 5. Test database connection - simple query
-    const { data: dbTest, error: dbError } = await supabase
+    const { data: dbTest, error: dbError } = await (supabase as any)
       .from('restaurants')
       .select('id')
       .limit(1);
@@ -80,7 +80,7 @@ export async function GET() {
         settings: {},
       };
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('restaurants')
         .insert(testInsert);
 
@@ -97,7 +97,7 @@ export async function GET() {
 
       // Clean up if insert succeeded
       if (!insertError) {
-        await supabase
+        await (supabase as any)
           .from('restaurants')
           .delete()
           .eq('slug', testInsert.slug);
@@ -115,7 +115,7 @@ export async function GET() {
 
     // 8. Check if user profile exists (foreign key requirement)
     if (userData?.user?.id) {
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await (supabase as any)
         .from('profiles')
         .select('id, email')
         .eq('id', userData.user.id)

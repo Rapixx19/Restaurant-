@@ -145,8 +145,8 @@ export function UsageOverview({ organizationId, className }: UsageOverviewProps)
           plan: { name: string; display_name: string; location_limit: number; minute_limit: number } | null;
         };
 
-        // Fetch organization with plan info
-        const { data: orgData } = await supabase
+        // Fetch organization with plan info - use limit(1) to avoid throwing
+        const { data: orgDataArray } = await supabase
           .from('organizations')
           .select(`
             voice_minutes_used,
@@ -158,10 +158,10 @@ export function UsageOverview({ organizationId, className }: UsageOverviewProps)
             )
           `)
           .eq('id', organizationId)
-          .single();
+          .limit(1);
 
         // Type assertion for the organization data
-        const org = orgData as unknown as OrgWithPlan | null;
+        const org = (orgDataArray?.[0] ?? null) as unknown as OrgWithPlan | null;
 
         if (!org) {
           setLoading(false);

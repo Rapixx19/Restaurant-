@@ -2,20 +2,27 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useRestaurant } from '@/lib/context';
 import type { Order } from '@/lib/database.types';
 import { OrderCard } from '@/modules/orders';
 import type { OrderStatus } from '@/modules/orders/types';
 
 interface OrdersDisplayProps {
-  restaurantId: string;
   initialOrders: Order[];
 }
 
-export function OrdersDisplay({ restaurantId, initialOrders }: OrdersDisplayProps) {
+/**
+ * OrdersDisplay - Kitchen Display System using RestaurantContext.
+ */
+export function OrdersDisplay({ initialOrders }: OrdersDisplayProps) {
+  const { restaurantId } = useRestaurant();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const supabase = createClient();
+
+  // Capture non-null reference for callbacks (TypeScript narrowing)
+  const restId = restaurantId ?? '';
 
   // Play notification sound for new orders
   const playNotificationSound = useCallback(() => {
@@ -36,15 +43,16 @@ export function OrdersDisplay({ restaurantId, initialOrders }: OrdersDisplayProp
 
   // Set up Supabase Realtime subscription
   useEffect(() => {
+    if (!restId) return;
     const channel = supabase
-      .channel('orders:' + restaurantId)
+      .channel('orders:' + restId)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'orders',
-          filter: 'restaurant_id=eq.' + restaurantId,
+          filter: 'restaurant_id=eq.' + restId,
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -93,7 +101,7 @@ export function OrdersDisplay({ restaurantId, initialOrders }: OrdersDisplayProp
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [restaurantId, supabase, playNotificationSound]);
+  }, [restId, supabase, playNotificationSound]);
 
   const handleStatusChange = async (id: string, newStatus: OrderStatus) => {
     // Use API route to handle status update + notifications

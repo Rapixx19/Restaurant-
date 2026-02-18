@@ -1,14 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { CalendarCheck, ShoppingBag, Clock, User } from 'lucide-react';
+import { CalendarCheck, ShoppingBag, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useRestaurant } from '@/lib/context';
 import type { Reservation, Order } from '@/lib/database.types';
-
-interface ActivityFeedProps {
-  restaurantId: string;
-}
 
 type ActivityType = 'reservation' | 'order';
 
@@ -67,11 +64,14 @@ function getStatusColor(status: string): string {
 
 /**
  * Real-time activity feed showing new reservations and orders.
+ * Uses RestaurantContext for restaurantId - no props needed.
  */
-export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
+export function ActivityFeed() {
+  const { restaurantId } = useRestaurant();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // All hooks must be called before any conditional returns
   const addActivity = useCallback((activity: Activity) => {
     setActivities((prev) => {
       // Avoid duplicates
@@ -100,6 +100,14 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
   }), []);
 
   useEffect(() => {
+    // Skip if no restaurant ID
+    if (!restaurantId) {
+      setLoading(false);
+      return;
+    }
+
+    // Capture non-null reference for closures (TypeScript narrowing)
+    const restId = restaurantId;
     const supabase = createClient();
 
     async function fetchInitialData() {
@@ -109,13 +117,13 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
           supabase
             .from('reservations')
             .select('*')
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .order('created_at', { ascending: false })
             .limit(10),
           supabase
             .from('orders')
             .select('*')
-            .eq('restaurant_id', restaurantId)
+            .eq('restaurant_id', restId)
             .order('created_at', { ascending: false })
             .limit(10),
         ]);
@@ -149,7 +157,7 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
           event: 'INSERT',
           schema: 'public',
           table: 'reservations',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${restId}`,
         },
         (payload) => {
           const reservation = payload.new as Reservation;
@@ -162,7 +170,7 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
           event: 'INSERT',
           schema: 'public',
           table: 'orders',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${restId}`,
         },
         (payload) => {
           const order = payload.new as Order;
@@ -175,7 +183,7 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
           event: 'UPDATE',
           schema: 'public',
           table: 'reservations',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${restId}`,
         },
         (payload) => {
           const reservation = payload.new as Reservation;
@@ -194,7 +202,7 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
           event: 'UPDATE',
           schema: 'public',
           table: 'orders',
-          filter: `restaurant_id=eq.${restaurantId}`,
+          filter: `restaurant_id=eq.${restId}`,
         },
         (payload) => {
           const order = payload.new as Order;
@@ -213,6 +221,26 @@ export function ActivityFeed({ restaurantId }: ActivityFeedProps) {
       supabase.removeChannel(channel);
     };
   }, [restaurantId, addActivity, reservationToActivity, orderToActivity]);
+
+  // Guard: show skeleton if no restaurant context (AFTER all hooks)
+  if (!restaurantId) {
+    return (
+      <div className="bg-card border border-white/10 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Recent Activity</h3>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-start gap-4 animate-pulse">
+              <div className="w-10 h-10 rounded-full bg-white/10" />
+              <div className="flex-1">
+                <div className="h-4 bg-white/10 rounded w-1/4 mb-2" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

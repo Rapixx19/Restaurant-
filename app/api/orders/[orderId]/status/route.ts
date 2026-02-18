@@ -55,9 +55,7 @@ export async function PATCH(
     // Send notification when order is ready
     if (status === 'ready' && order.customer_phone) {
       // Fire and forget - don't block the response
-      sendOrderReadyAlert(orderId).then((result) => {
-        console.log('Order ready notification sent:', result);
-      }).catch((err) => {
+      sendOrderReadyAlert(orderId).catch((err) => {
         console.error('Failed to send order ready notification:', err);
       });
     }

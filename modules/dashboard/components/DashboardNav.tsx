@@ -103,13 +103,6 @@ export function DashboardNav({ user, profile, restaurant, organizationUsage }: D
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  // Debug logging for hydration issues
-  if (typeof window !== 'undefined') {
-    console.log('[DashboardNav] Current User:', user);
-    console.log('[DashboardNav] Current Profile:', profile);
-    console.log('[DashboardNav] Current Restaurant:', restaurant);
-  }
-
   // Defensive: handle potential undefined user during hydration
   const userEmail = user?.email ?? '';
   const displayName = profile?.full_name || userEmail.split('@')[0] || 'User';
@@ -223,16 +216,18 @@ export function DashboardNav({ user, profile, restaurant, organizationUsage }: D
               <span className="text-lg font-bold text-white">VECTERAI</span>
             </Link>
           </div>
-          {restaurant && (
-            <div className="px-6 pb-4">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5">
-                <Store className="w-4 h-4 text-electric-blue" />
-                <span className="text-sm font-medium text-white truncate">
-                  {restaurant.name}
-                </span>
-              </div>
-            </div>
-          )}
+          <div className="px-6 pb-4">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5">
+            <Store className="w-4 h-4 text-electric-blue flex-shrink-0" />
+            {restaurant?.name ? (
+              <span className="text-sm font-medium text-white truncate">
+                {restaurant.name}
+              </span>
+            ) : (
+              <div className="h-4 w-24 bg-white/10 rounded shimmer" />
+            )}
+          </div>
+        </div>
         </div>
 
         {/* Navigation */}

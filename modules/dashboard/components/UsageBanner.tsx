@@ -5,13 +5,9 @@ import Link from 'next/link';
 import { TrendingUp, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useRestaurant } from '@/lib/context';
 import { getPricingTier, type PricingTier } from '@/modules/landing/constants/pricing';
-import type { Restaurant } from '@/lib/database.types';
 import type { RestaurantSettings, TierId } from '@/modules/settings/types';
-
-interface UsageBannerProps {
-  restaurant: Restaurant;
-}
 
 interface UsageData {
   chatMessages: number;
@@ -20,13 +16,12 @@ interface UsageData {
 
 /**
  * Displays current tier usage with progress bars and upgrade CTA.
+ * Uses RestaurantContext - no props needed.
  */
-export function UsageBanner({ restaurant }: UsageBannerProps) {
+export function UsageBanner() {
+  const { restaurant, restaurantId } = useRestaurant();
   const [usage, setUsage] = useState<UsageData>({ chatMessages: 0, reservations: 0 });
   const [loading, setLoading] = useState(true);
-
-  // Defensive: safely extract restaurant ID (hooks must be called unconditionally)
-  const restaurantId = restaurant?.id ?? null;
 
   // Extract settings safely
   const settings = (restaurant?.settings ?? {}) as unknown as RestaurantSettings;
@@ -39,6 +34,9 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
       setLoading(false);
       return;
     }
+
+    // Capture non-null reference for closures (TypeScript narrowing)
+    const restId = restaurantId;
 
     async function fetchUsage() {
       try {
@@ -56,7 +54,7 @@ export function UsageBanner({ restaurant }: UsageBannerProps) {
         const { count: reservationCount } = await supabase
           .from('reservations')
           .select('id', { count: 'exact', head: true })
-          .eq('restaurant_id', restaurantId)
+          .eq('restaurant_id', restId)
           .gte('created_at', startOfMonth);
 
         setUsage({

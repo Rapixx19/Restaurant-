@@ -24,17 +24,29 @@ export async function login(
     };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
+  // Debug logging - check terminal output
   if (error) {
+    console.error('❌ SUPABASE_AUTH_ERROR:', {
+      message: error.message,
+      status: error.status,
+      code: (error as any).code,
+    });
     return {
       error: error.message,
       success: false,
     };
   }
+
+  console.log('✅ LOGIN SUCCESS:', {
+    userId: data.user?.id,
+    email: data.user?.email,
+    sessionExists: !!data.session,
+  });
 
   // Get redirect URL from form data or default to dashboard
   const redirectTo = (formData.get('redirect') as string) || '/dashboard';
